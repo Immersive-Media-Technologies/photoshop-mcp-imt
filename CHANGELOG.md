@@ -62,7 +62,12 @@ First public release of PS-MCP-IMT (the Immersive Media Technologies fork), base
 
 ### Notes
 
-- Verified by us on **macOS, Photoshop 2026 (27.9–27.10), UXP 9.4.1, Node 26**. The Windows
+- Verified by us on **macOS, Photoshop 2026 (27.9–27.10), UXP 9.4.1, Node 26**, Russian UI: the
+  live sweep `npm run test:mcp-all` — 193 pass, 0 fail, 11 environment-dependent skips (generative
+  credits, Actions palette, subject detection) on 2026-10-01; the UXP bridge, the facade and
+  `distort_layer` probed live the same day.
+- `scripts/test-all-mcp-tools.ts` no longer assumes the English «copy» suffix for duplicated layers
+  (localized Photoshop names them differently) — it reads the name the server returns. The Windows
   transport (ExtendScript through COM, `cscript`) is inherited from upstream with the 1.7.21
   UTF-16 fix and is not verified by us — reports welcome. The UXP plugin is host-agnostic; its
   install path on Windows is the usual `%APPDATA%\Adobe\UXP\Plugins\External`.
