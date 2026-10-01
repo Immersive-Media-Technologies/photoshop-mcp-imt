@@ -1,0 +1,908 @@
+/**
+ * Sequential local integration test for every photoshop-mcp tool.
+ * Run: npx tsx scripts/test-all-mcp-tools.ts
+ */
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { execSync } from 'node:child_process';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { homedir, tmpdir } from 'node:os';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+const TEST_CHAT_ID = 'local-mcp-test-all';
+const EXPORT_DIR = join(homedir(), '.photoshop-mcp', 'exports', TEST_CHAT_ID);
+
+type ToolOutcome = 'pass' | 'fail' | 'skip';
+
+interface ToolRunResult {
+  name: string;
+  outcome: ToolOutcome;
+  detail: string;
+  ms: number;
+}
+
+function textFrom(result: unknown): string {
+  const content = ((result as { content?: unknown }).content ?? []) as Array<{
+    type: string;
+    text?: string;
+  }>;
+  return content
+    .filter((c) => c.type === 'text' && c.text)
+    .map((c) => c.text!)
+    .join('\n');
+}
+
+function short(text: string, max = 140): string {
+  const oneLine = text.replace(/\s+/g, ' ').trim();
+  return oneLine.length <= max ? oneLine : `${oneLine.slice(0, max)}…`;
+}
+
+function parseJsonFromToolText(body: string): unknown {
+  const jsonStart = body.indexOf('{');
+  const jsonArrayStart = body.indexOf('[');
+  const start =
+    jsonStart >= 0 && (jsonArrayStart < 0 || jsonStart <= jsonArrayStart)
+      ? jsonStart
+      : jsonArrayStart;
+  if (start < 0) throw new Error('No JSON payload in tool response');
+  return JSON.parse(body.slice(start));
+}
+
+class ToolTestRunner {
+  private results: ToolRunResult[] = [];
+  private layerName = 'MCP_Paint';
+  private textLayerName = 'MCP_Text';
+
+  constructor(private client: Client) {}
+
+  async run(
+    name: string,
+    args: Record<string, unknown> = {},
+    opts: { required?: boolean; skip?: string; expectError?: boolean } = {}
+  ): Promise<boolean> {
+    if (opts.skip) {
+      this.record(name, 'skip', opts.skip, 0);
+      console.log(`  SKIP ${name} — ${opts.skip}`);
+      return false;
+    }
+
+    const started = Date.now();
+    try {
+      const result = await this.client.callTool({ name, arguments: args });
+      const ms = Date.now() - started;
+      const body = textFrom(result);
+
+      if (opts.expectError) {
+        if (result.isError) {
+          this.record(name, 'pass', short(body), ms);
+          console.log(`  OK   ${name} (expected error, ${ms}ms) — ${short(body)}`);
+          return true;
+        }
+        this.record(name, 'fail', 'expected tool error', ms);
+        console.log(`  FAIL ${name} (${ms}ms) — expected error but tool succeeded`);
+        if (opts.required) throw new Error(`Expected error but tool succeeded: ${name}`);
+        return false;
+      }
+
+      if (result.isError) {
+        this.record(name, 'fail', short(body), ms);
+        console.log(`  FAIL ${name} (${ms}ms) — ${short(body)}`);
+        if (opts.required) throw new Error(`Required tool failed: ${name}`);
+        return false;
+      }
+
+      this.record(name, 'pass', short(body), ms);
+      console.log(`  OK   ${name} (${ms}ms) — ${short(body)}`);
+      return true;
+    } catch (error) {
+      const ms = Date.now() - started;
+      const msg = error instanceof Error ? error.message : String(error);
+      this.record(name, 'fail', short(msg), ms);
+      console.log(`  FAIL ${name} (${ms}ms) — ${short(msg)}`);
+      if (opts.required) throw error;
+      return false;
+    }
+  }
+
+  private record(name: string, outcome: ToolOutcome, detail: string, ms: number): void {
+    this.results.push({ name, outcome, detail, ms });
+  }
+
+  summary(): void {
+    const pass = this.results.filter((r) => r.outcome === 'pass').length;
+    const fail = this.results.filter((r) => r.outcome === 'fail').length;
+    const skip = this.results.filter((r) => r.outcome === 'skip').length;
+
+    console.log('\n========================================');
+    console.log(`SUMMARY: ${pass} pass, ${fail} fail, ${skip} skip (${this.results.length} total)`);
+    console.log('========================================');
+
+    if (fail > 0) {
+      console.log('\nFailures:');
+      for (const r of this.results.filter((x) => x.outcome === 'fail')) {
+        console.log(`  - ${r.name}: ${r.detail}`);
+      }
+    }
+    if (skip > 0) {
+      console.log('\nSkipped:');
+      for (const r of this.results.filter((x) => x.outcome === 'skip')) {
+        console.log(`  - ${r.name}: ${r.detail}`);
+      }
+    }
+  }
+
+  recordPrompt(name: string, outcome: ToolOutcome, detail: string, ms: number): void {
+    this.record(name, outcome, detail, ms);
+  }
+
+  getResults(): ToolRunResult[] {
+    return this.results;
+  }
+}
+
+function writeTestPng(path: string): void {
+  execSync(
+    `python3 -c "import struct,zlib,binascii; w=h=64; rows=b''.join(b'\\x00'+b'\\xff\\x00\\x00'*w for _ in range(h)); comp=zlib.compress(rows,9); crc=lambda t,d: struct.pack('>I',binascii.crc32(t+d)&0xffffffff); ch=lambda t,d: struct.pack('>I',len(d))+t+d+crc(t,d); png=b'\\x89PNG\\r\\n\\x1a\\n'+ch(b'IHDR',struct.pack('>IIBBBBB',w,h,8,2,0,0,0))+ch(b'IDAT',comp)+ch(b'IEND',b''); open('${path}','wb').write(png)"`,
+    { stdio: 'ignore' }
+  );
+}
+
+async function main(): Promise<void> {
+  mkdirSync(EXPORT_DIR, { recursive: true });
+  const testPng = join(tmpdir(), 'photoshop-mcp-test.png');
+  const assetsDir = join(tmpdir(), 'photoshop-mcp-test-assets');
+  mkdirSync(assetsDir, { recursive: true });
+  writeTestPng(testPng);
+  writeTestPng(join(assetsDir, 'asset-a.png'));
+  writeTestPng(join(assetsDir, 'asset-b.png'));
+
+  const transport = new StdioClientTransport({
+    command: 'npx',
+    args: ['tsx', join(ROOT, 'src/index.ts')],
+    env: {
+      ...process.env,
+      LOG_LEVEL: '0',
+      PHOTOSHOP_EXPORT_CHAT_ID: TEST_CHAT_ID,
+    },
+    stderr: 'pipe',
+    cwd: ROOT,
+  });
+
+  const client = new Client({ name: 'test-all-tools', version: '1.0.0' });
+  await client.connect(transport);
+  const t = new ToolTestRunner(client);
+
+  console.log('\n=== Phase 0: Session bootstrap ===');
+  await t.run('photoshop_ping', {}, { required: true });
+  await t.run('photoshop_get_version', {}, { required: true });
+  await t.run('photoshop_get_capabilities', {}, { required: true });
+  await t.run('photoshop_get_state');
+
+  await t.run('photoshop_execute_script', {
+    code: `while (app.documents.length > 0) { app.activeDocument.close(SaveOptions.DONOTSAVECHANGES); } return { documentsClosed: true };`,
+  });
+
+  console.log('\n=== Phase 1: Document ===');
+  await t.run('photoshop_create_document', { width: 800, height: 600 }, { required: true });
+
+  {
+    const docInfoResult = await client.callTool({ name: 'photoshop_get_document_info', arguments: {} });
+    const docInfoBody = textFrom(docInfoResult);
+    if (docInfoResult.isError) {
+      t.recordPrompt('assert:document_info_fields', 'fail', short(docInfoBody), 0);
+      console.log(`  FAIL assert:document_info_fields — ${short(docInfoBody)}`);
+    } else {
+      try {
+        const payload = parseJsonFromToolText(docInfoBody) as {
+          document?: { width?: number; height?: number; error?: string };
+        };
+        const ok =
+          payload.document?.width === 800 &&
+          payload.document?.height === 600 &&
+          !payload.document?.error;
+        t.recordPrompt(
+          'assert:document_info_fields',
+          ok ? 'pass' : 'fail',
+          ok
+            ? `width=${payload.document?.width}, height=${payload.document?.height}`
+            : JSON.stringify(payload.document),
+          0
+        );
+        console.log(
+          `  ${ok ? 'OK' : 'FAIL'}  assert:document_info_fields — ${ok ? 'width/height populated, no document.error' : short(JSON.stringify(payload.document))}`
+        );
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        t.recordPrompt('assert:document_info_fields', 'fail', msg, 0);
+        console.log(`  FAIL assert:document_info_fields — ${msg}`);
+      }
+    }
+  }
+
+  await t.run('photoshop_get_state', {}, { required: true });
+
+  console.log('\n=== Phase 2: Layers ===');
+  await t.run('photoshop_create_layer', { name: 'MCP_Paint' });
+  await t.run('photoshop_fill_layer', { red: 220, green: 40, blue: 40 });
+  await t.run('photoshop_create_text_layer', {
+    text: 'MCP Test',
+    x: 120,
+    y: 120,
+    fontSize: 36,
+  });
+  await t.run('photoshop_get_layers', {}, { required: true });
+  await t.run('photoshop_select_layer_by_name', { name: 'MCP_Paint' }, { required: true });
+  await t.run('photoshop_select_layer_by_name', { name: '__MCP_MISSING_LAYER__' }, { expectError: true });
+
+  console.log('\n=== Phase 3: Layer properties ===');
+  await t.run('photoshop_execute_script', {
+    code: `app.activeDocument.activeLayer = app.activeDocument.artLayers.getByName("MCP_Paint"); return { selected: app.activeDocument.activeLayer.name };`,
+  });
+  await t.run('photoshop_set_layer_opacity', { opacity: 85 });
+  await t.run('photoshop_set_layer_blend_mode', { blendMode: 'MULTIPLY' });
+  await t.run('photoshop_set_layer_blend_mode', { blendMode: 'COLOR' });
+  await t.run('photoshop_apply_layer_style', { style: 'drop_shadow' });
+  await t.run('photoshop_set_layer_visibility', { visible: true });
+  await t.run('photoshop_rename_layer', { name: 'MCP_Paint_Renamed' });
+  await t.run('photoshop_duplicate_layer');
+  await t.run('photoshop_set_layer_locked', { locked: false });
+  await t.run('photoshop_execute_script', {
+    code: `app.activeDocument.activeLayer = app.activeDocument.artLayers.getByName("MCP_Paint_Renamed"); return { active: app.activeDocument.activeLayer.name };`,
+  });
+
+  console.log('\n=== Phase 4: Layer transforms ===');
+  await t.run('photoshop_move_layer', { deltaX: 10, deltaY: 5 });
+  await t.run('photoshop_scale_layer', { scalePercent: 95 });
+  await t.run('photoshop_rotate_layer', { degrees: 2 });
+  await t.run('photoshop_fit_layer_to_document', { fillDocument: false });
+
+  console.log('\n=== Phase 4b: Document session ===');
+  await t.run('photoshop_create_document', { width: 400, height: 300 });
+  {
+    const listResult = await client.callTool({ name: 'photoshop_list_documents', arguments: {} });
+    const listBody = textFrom(listResult);
+    if (listResult.isError) {
+      t.recordPrompt('assert:list_documents_after_create', 'fail', short(listBody), 0);
+      console.log(`  FAIL assert:list_documents_after_create — ${short(listBody)}`);
+    } else {
+      try {
+        const payload = parseJsonFromToolText(listBody) as {
+          ok?: boolean;
+          details?: {
+            count?: number;
+            documents?: Array<{ is_active?: boolean }>;
+          };
+        };
+        const docs = payload.details?.documents ?? [];
+        const activeCount = docs.filter((d) => d.is_active).length;
+        const ok =
+          payload.ok === true &&
+          (payload.details?.count ?? 0) >= 1 &&
+          activeCount === 1;
+        t.recordPrompt(
+          'assert:list_documents_after_create',
+          ok ? 'pass' : 'fail',
+          ok
+            ? `count=${payload.details?.count}, one is_active`
+            : JSON.stringify(payload.details),
+          0
+        );
+        console.log(
+          `  ${ok ? 'OK' : 'FAIL'}  assert:list_documents_after_create — ${ok ? `count=${payload.details?.count}` : short(JSON.stringify(payload.details))}`
+        );
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        t.recordPrompt('assert:list_documents_after_create', 'fail', msg, 0);
+        console.log(`  FAIL assert:list_documents_after_create — ${msg}`);
+      }
+    }
+  }
+
+  await t.run('photoshop_open_image', { filePath: testPng });
+  let switchTargetId: number | undefined;
+  {
+    const listResult = await client.callTool({ name: 'photoshop_list_documents', arguments: {} });
+    const listBody = textFrom(listResult);
+    if (listResult.isError) {
+      t.recordPrompt('assert:list_documents_multi', 'fail', short(listBody), 0);
+      console.log(`  FAIL assert:list_documents_multi — ${short(listBody)}`);
+    } else {
+      try {
+        const payload = parseJsonFromToolText(listBody) as {
+          ok?: boolean;
+          details?: {
+            count?: number;
+            documents?: Array<{
+              id?: number;
+              is_active?: boolean;
+              width?: number;
+              height?: number;
+            }>;
+          };
+        };
+        const docs = payload.details?.documents ?? [];
+        // After 800x600 + 400x300 + open_image, the PNG is active. The first
+        // inactive tab is the original 800x600 — pick the 400x300 by size.
+        const target400 = docs.find(
+          (d) => d.is_active !== true && d.width === 400 && d.height === 300
+        );
+        switchTargetId = target400?.id;
+        const ok = payload.ok === true && (payload.details?.count ?? 0) >= 2;
+        t.recordPrompt(
+          'assert:list_documents_multi',
+          ok ? 'pass' : 'fail',
+          ok ? `count=${payload.details?.count}` : JSON.stringify(payload.details),
+          0
+        );
+        console.log(
+          `  ${ok ? 'OK' : 'FAIL'}  assert:list_documents_multi — ${ok ? `count=${payload.details?.count}` : short(JSON.stringify(payload.details))}`
+        );
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        t.recordPrompt('assert:list_documents_multi', 'fail', msg, 0);
+        console.log(`  FAIL assert:list_documents_multi — ${msg}`);
+      }
+    }
+  }
+
+  if (switchTargetId !== undefined) {
+    await t.run('photoshop_set_active_document', { document_id: switchTargetId }, { required: true });
+    {
+      const docInfoResult = await client.callTool({
+        name: 'photoshop_get_document_info',
+        arguments: {},
+      });
+      const docInfoBody = textFrom(docInfoResult);
+      if (docInfoResult.isError) {
+        t.recordPrompt('assert:set_active_by_id', 'fail', short(docInfoBody), 0);
+        console.log(`  FAIL assert:set_active_by_id — ${short(docInfoBody)}`);
+      } else {
+        try {
+          const payload = parseJsonFromToolText(docInfoBody) as {
+            document?: { width?: number; height?: number };
+          };
+          const ok = payload.document?.width === 400 && payload.document?.height === 300;
+          t.recordPrompt(
+            'assert:set_active_by_id',
+            ok ? 'pass' : 'fail',
+            ok
+              ? `active doc 400x300 (id ${switchTargetId})`
+              : JSON.stringify(payload.document),
+            0
+          );
+          console.log(
+            `  ${ok ? 'OK' : 'FAIL'}  assert:set_active_by_id — ${ok ? '400x300 document active' : short(JSON.stringify(payload.document))}`
+          );
+        } catch (error) {
+          const msg = error instanceof Error ? error.message : String(error);
+          t.recordPrompt('assert:set_active_by_id', 'fail', msg, 0);
+          console.log(`  FAIL assert:set_active_by_id — ${msg}`);
+        }
+      }
+    }
+  } else {
+    t.recordPrompt('assert:set_active_by_id', 'fail', 'no inactive document id captured', 0);
+    console.log('  FAIL assert:set_active_by_id — no inactive document id captured');
+  }
+
+  await t.run('photoshop_set_active_document', { index: 0 }, { required: true });
+  await t.run('photoshop_set_active_document', {}, { expectError: true });
+  await t.run('photoshop_set_active_document', { document_id: 999999999 }, { expectError: true });
+
+  console.log('\n=== Phase 5: Layer ordering ===');
+  await t.run('photoshop_move_layer_up');
+  await t.run('photoshop_move_layer_down');
+  await t.run('photoshop_move_layer_to_top');
+  await t.run('photoshop_move_layer_to_position', {
+    targetLayerName: 'MCP_Paint_Renamed',
+    position: 'ABOVE',
+  });
+  await t.run('photoshop_move_layer_to_bottom');
+
+  console.log('\n=== Phase 6: Selection & masks ===');
+  await t.run('photoshop_execute_script', {
+    code: `app.activeDocument.activeLayer = app.activeDocument.artLayers.getByName("MCP_Paint_Renamed"); return { active: app.activeDocument.activeLayer.name };`,
+  });
+
+  console.log('\n--- Phase 6a: get_selection_bounds ---');
+  await t.run('photoshop_deselect');
+  {
+    const boundsResult = await client.callTool({ name: 'photoshop_get_selection_bounds', arguments: {} });
+    const boundsBody = textFrom(boundsResult);
+    if (boundsResult.isError) {
+      t.recordPrompt('assert:get_selection_bounds_no_sel', 'fail', short(boundsBody), 0);
+      console.log(`  FAIL assert:get_selection_bounds_no_sel — ${short(boundsBody)}`);
+    } else {
+      try {
+        const payload = parseJsonFromToolText(boundsBody) as {
+          ok?: boolean;
+          details?: { has_selection?: boolean };
+        };
+        const ok = payload.ok === true && payload.details?.has_selection === false;
+        t.recordPrompt(
+          'assert:get_selection_bounds_no_sel',
+          ok ? 'pass' : 'fail',
+          ok ? 'has_selection=false' : JSON.stringify(payload.details),
+          0
+        );
+        console.log(
+          `  ${ok ? 'OK' : 'FAIL'}  assert:get_selection_bounds_no_sel — ${ok ? 'has_selection=false' : short(JSON.stringify(payload.details))}`
+        );
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        t.recordPrompt('assert:get_selection_bounds_no_sel', 'fail', msg, 0);
+        console.log(`  FAIL assert:get_selection_bounds_no_sel — ${msg}`);
+      }
+    }
+  }
+
+  const selLeft = 100;
+  const selTop = 100;
+  const selRight = 250;
+  const selBottom = 250;
+  await t.run('photoshop_select_rectangle', {
+    left: selLeft,
+    top: selTop,
+    right: selRight,
+    bottom: selBottom,
+  });
+  {
+    const boundsResult = await client.callTool({ name: 'photoshop_get_selection_bounds', arguments: {} });
+    const boundsBody = textFrom(boundsResult);
+    if (boundsResult.isError) {
+      t.recordPrompt('assert:get_selection_bounds_rect', 'fail', short(boundsBody), 0);
+      console.log(`  FAIL assert:get_selection_bounds_rect — ${short(boundsBody)}`);
+    } else {
+      try {
+        const payload = parseJsonFromToolText(boundsBody) as {
+          ok?: boolean;
+          details?: {
+            has_selection?: boolean;
+            bounds?: { left?: number; top?: number; right?: number; bottom?: number };
+          };
+        };
+        const b = payload.details?.bounds;
+        const ok =
+          payload.ok === true &&
+          payload.details?.has_selection === true &&
+          b?.left === selLeft &&
+          b?.top === selTop &&
+          b?.right === selRight &&
+          b?.bottom === selBottom;
+        t.recordPrompt(
+          'assert:get_selection_bounds_rect',
+          ok ? 'pass' : 'fail',
+          ok ? `bounds=[${selLeft},${selTop},${selRight},${selBottom}]` : JSON.stringify(b),
+          0
+        );
+        console.log(
+          `  ${ok ? 'OK' : 'FAIL'}  assert:get_selection_bounds_rect — ${ok ? `bounds match rectangle` : short(JSON.stringify(b))}`
+        );
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        t.recordPrompt('assert:get_selection_bounds_rect', 'fail', msg, 0);
+        console.log(`  FAIL assert:get_selection_bounds_rect — ${msg}`);
+      }
+    }
+  }
+  await t.run('photoshop_get_selection_bounds');
+  await t.run('photoshop_get_state', {}, { required: true });
+
+  console.log('\n--- Phase 6b: Selection modifiers ---');
+  await t.run('photoshop_select_rectangle', {
+    left: selLeft,
+    top: selTop,
+    right: selRight,
+    bottom: selBottom,
+  });
+  await t.run('photoshop_expand_selection', { pixels: 5 });
+  {
+    const boundsResult = await client.callTool({ name: 'photoshop_get_selection_bounds', arguments: {} });
+    const boundsBody = textFrom(boundsResult);
+    if (boundsResult.isError) {
+      t.recordPrompt('assert:expand_selection_bounds', 'fail', short(boundsBody), 0);
+      console.log(`  FAIL assert:expand_selection_bounds — ${short(boundsBody)}`);
+    } else {
+      try {
+        const payload = parseJsonFromToolText(boundsBody) as {
+          ok?: boolean;
+          details?: {
+            has_selection?: boolean;
+            bounds?: { left?: number; top?: number; right?: number; bottom?: number };
+          };
+        };
+        const b = payload.details?.bounds;
+        const ok =
+          payload.ok === true &&
+          payload.details?.has_selection === true &&
+          b?.left === selLeft - 5 &&
+          b?.top === selTop - 5 &&
+          b?.right === selRight + 5 &&
+          b?.bottom === selBottom + 5;
+        t.recordPrompt(
+          'assert:expand_selection_bounds',
+          ok ? 'pass' : 'fail',
+          ok ? 'expanded bounds match' : JSON.stringify(b),
+          0
+        );
+        console.log(
+          `  ${ok ? 'OK' : 'FAIL'}  assert:expand_selection_bounds — ${ok ? 'expanded bounds match' : short(JSON.stringify(b))}`
+        );
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        t.recordPrompt('assert:expand_selection_bounds', 'fail', msg, 0);
+        console.log(`  FAIL assert:expand_selection_bounds — ${msg}`);
+      }
+    }
+  }
+
+  await t.run('photoshop_contract_selection', { pixels: 3 });
+  await t.run('photoshop_feather_selection', { pixels: 2 });
+  await t.run('photoshop_get_selection_bounds');
+
+  const ellLeft = 50;
+  const ellTop = 50;
+  const ellRight = 200;
+  const ellBottom = 200;
+  await t.run('photoshop_select_ellipse', {
+    left: ellLeft,
+    top: ellTop,
+    right: ellRight,
+    bottom: ellBottom,
+  });
+  {
+    const boundsResult = await client.callTool({ name: 'photoshop_get_selection_bounds', arguments: {} });
+    const boundsBody = textFrom(boundsResult);
+    if (boundsResult.isError) {
+      t.recordPrompt('assert:select_ellipse_bounds', 'fail', short(boundsBody), 0);
+      console.log(`  FAIL assert:select_ellipse_bounds — ${short(boundsBody)}`);
+    } else {
+      try {
+        const payload = parseJsonFromToolText(boundsBody) as {
+          ok?: boolean;
+          details?: {
+            has_selection?: boolean;
+            bounds?: { left?: number; top?: number; right?: number; bottom?: number };
+          };
+        };
+        const b = payload.details?.bounds;
+        const ok =
+          payload.ok === true &&
+          payload.details?.has_selection === true &&
+          b?.left === ellLeft &&
+          b?.top === ellTop &&
+          b?.right === ellRight &&
+          b?.bottom === ellBottom;
+        t.recordPrompt(
+          'assert:select_ellipse_bounds',
+          ok ? 'pass' : 'fail',
+          ok ? 'ellipse bounds match' : JSON.stringify(b),
+          0
+        );
+        console.log(
+          `  ${ok ? 'OK' : 'FAIL'}  assert:select_ellipse_bounds — ${ok ? 'ellipse bounds match' : short(JSON.stringify(b))}`
+        );
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        t.recordPrompt('assert:select_ellipse_bounds', 'fail', msg, 0);
+        console.log(`  FAIL assert:select_ellipse_bounds — ${msg}`);
+      }
+    }
+  }
+
+  await t.run('photoshop_save_selection', { channel_name: 'MCP_Test_Sel' });
+  await t.run('photoshop_deselect');
+  await t.run('photoshop_expand_selection', { pixels: 5 }, { expectError: true });
+  await t.run(
+    'photoshop_select_ellipse',
+    { left: 200, top: 50, right: 50, bottom: 200 },
+    { expectError: true }
+  );
+
+  await t.run('photoshop_select_rectangle', { left: 50, top: 50, right: 300, bottom: 300 });
+  await t.run('photoshop_content_aware_fill');
+  await t.run('photoshop_select_all');
+  await t.run('photoshop_invert_selection');
+  await t.run('photoshop_create_layer_mask');
+  await t.run('photoshop_apply_layer_mask');
+  await t.run('photoshop_select_rectangle', { left: 60, top: 60, right: 280, bottom: 280 });
+  await t.run('photoshop_create_layer_mask');
+  await t.run('photoshop_apply_gradient_mask', { direction: 'bottom_to_top' });
+  await t.run('photoshop_select_subject', undefined, {
+    skip: 'requires recognizable subject in active layer',
+  });
+  await t.run('photoshop_delete_layer_mask');
+  await t.run('photoshop_deselect');
+
+  console.log('\n--- Phase 6c: Clipping mask ---');
+  await t.run('photoshop_create_document', { width: 200, height: 200 });
+  await t.run('photoshop_create_layer', { name: 'MCP_Clip_Base' });
+  await t.run('photoshop_fill_layer', { red: 200, green: 200, blue: 50 });
+  await t.run('photoshop_create_layer', { name: 'MCP_Clip_Top' });
+  await t.run('photoshop_fill_layer', { red: 40, green: 120, blue: 220 });
+  await t.run('photoshop_select_layer_by_name', { name: 'MCP_Clip_Top' }, { required: true });
+  await t.run('photoshop_create_clipping_mask', { layer_name: 'MCP_Clip_Top' });
+  await t.run('photoshop_release_clipping_mask', { layer_name: 'MCP_Clip_Top' });
+  await t.run('photoshop_create_document', { width: 100, height: 100 });
+  await t.run('photoshop_create_clipping_mask', {}, { expectError: true });
+  await t.run('photoshop_set_active_document', { index: 0 }, { required: true });
+
+  console.log('\n=== Phase 7: Adjustments ===');
+  await t.run('photoshop_select_layer_by_name', { name: 'MCP_Paint_Renamed copy' });
+  await t.run('photoshop_execute_script', {
+    code: `var L=app.activeDocument.activeLayer; L.blendMode=BlendMode.NORMAL; return { selected: L.name, blendMode: String(L.blendMode) };`,
+  });
+  await t.run('photoshop_adjust_brightness_contrast', { brightness: 5, contrast: 5 });
+  await t.run('photoshop_adjust_hue_saturation', { hue: 5, saturation: 5, lightness: 0 });
+  await t.run('photoshop_auto_levels');
+  await t.run('photoshop_auto_contrast');
+  await t.run('photoshop_adjust_curves', { preset: 'auto_tone' });
+  await t.run('photoshop_select_layer_by_name', { name: 'MCP_Paint_Renamed copy' });
+  await t.run('photoshop_desaturate');
+  await t.run('photoshop_invert');
+
+  console.log('\n--- Phase 7b: Filters (high pass, smart blur) ---');
+  await t.run('photoshop_select_layer_by_name', { name: 'MCP_Paint_Renamed copy' });
+  await t.run('photoshop_apply_high_pass', { radius: 5 });
+  await t.run('photoshop_apply_smart_blur', { radius: 10, threshold: 25 });
+  await t.run('photoshop_apply_high_pass', { radius: 0 }, { expectError: true });
+
+  console.log('\n=== Phase 8: Filters ===');
+  await t.run('photoshop_select_layer_by_name', { name: 'MCP_Paint_Renamed copy' });
+  await t.run('photoshop_apply_gaussian_blur', { radius: 1.5 });
+  await t.run('photoshop_apply_sharpen', { amount: 50, radius: 1, threshold: 0 });
+  await t.run('photoshop_apply_noise', { amount: 2, distribution: 'UNIFORM', monochromatic: true });
+  await t.run('photoshop_apply_motion_blur', { angle: 0, radius: 5 });
+
+  console.log('\n=== Phase 9: Text ===');
+  await t.run('photoshop_list_fonts', { query: 'Arial', limit: 50 });
+  await t.run('photoshop_execute_script', {
+    code: `for (var i = 0; i < app.activeDocument.artLayers.length; i++) { var L = app.activeDocument.artLayers[i]; if (L.kind == LayerKind.TEXT) { app.activeDocument.activeLayer = L; break; } } return { active: app.activeDocument.activeLayer.name };`,
+  });
+  await t.run('photoshop_set_text_font', { fontName: 'Arial', fontSize: 32 });
+  await t.run('photoshop_create_text_layer', {
+    text: 'MCP Arial',
+    x: 160,
+    y: 160,
+    fontSize: 20,
+    fontName: 'Arial',
+  });
+  await t.run('photoshop_set_text_color', { red: 10, green: 10, blue: 200 });
+  await t.run('photoshop_set_text_alignment', { alignment: 'CENTER' });
+  await t.run('photoshop_update_text_content', { text: 'MCP Updated' });
+
+  console.log('\n=== Phase 10: Image placement (absolute top-left x/y) ===');
+  await t.run('photoshop_place_image', { filePath: testPng, x: 400, y: 200 });
+  await t.run('photoshop_open_image', { filePath: testPng });
+  await t.run('photoshop_execute_script', {
+    code: `for (var i=0;i<app.documents.length;i++){var d=app.documents[i]; if(d.width.as('px')===800&&d.height.as('px')===600){app.activeDocument=d;break;}} return {active:app.activeDocument.name,width:app.activeDocument.width.as('px')};`,
+  }, { required: true });
+
+  console.log('\n=== Phase 10b: Smart Objects ===');
+  await t.run('photoshop_create_layer', { name: 'MCP_SO_Convert' });
+  await t.run('photoshop_fill_layer', { red: 0, green: 180, blue: 80 });
+  await t.run('photoshop_convert_to_smart_object', { layer_name: 'MCP_SO_Convert' });
+  await t.run('photoshop_execute_script', {
+    code: `var doc=app.activeDocument; var target=null; for(var i=0;i<doc.layers.length;i++){var L=doc.layers[i]; if(String(L.kind)==='LayerKind.SMARTOBJECT'){target=L;break;}} if(!target) throw new Error('No Smart Object layer found'); doc.activeLayer=target; return {active:target.name,kind:String(target.kind)};`,
+  });
+  await t.run('photoshop_replace_smart_object_contents', {
+    file_path: join(assetsDir, 'asset-b.png'),
+  });
+  await t.run('photoshop_create_smart_object_via_copy');
+  {
+    const started = Date.now();
+    const editCall = await client.callTool({
+      name: 'photoshop_edit_smart_object_contents',
+      arguments: {},
+    });
+    const editBody = textFrom(editCall);
+    const ms = Date.now() - started;
+    let hasEmbeddedDoc = false;
+    try {
+      const payload = parseJsonFromToolText(editBody) as {
+        ok?: boolean;
+        details?: { embedded_document?: unknown };
+        embedded_document?: unknown;
+      };
+      hasEmbeddedDoc =
+        payload.details?.embedded_document !== undefined ||
+        payload.embedded_document !== undefined ||
+        editBody.includes('embedded_document');
+    } catch {
+      hasEmbeddedDoc = editBody.includes('embedded_document');
+    }
+    if (editCall.isError) {
+      t.recordPrompt('photoshop_edit_smart_object_contents', 'fail', short(editBody), ms);
+      console.log(`  FAIL photoshop_edit_smart_object_contents (${ms}ms) — ${short(editBody)}`);
+    } else if (!hasEmbeddedDoc) {
+      t.recordPrompt(
+        'photoshop_edit_smart_object_contents',
+        'fail',
+        'missing embedded_document in response',
+        ms
+      );
+      console.log(`  FAIL photoshop_edit_smart_object_contents (${ms}ms) — missing embedded_document`);
+    } else {
+      t.recordPrompt('photoshop_edit_smart_object_contents', 'pass', short(editBody), ms);
+      console.log(`  OK   photoshop_edit_smart_object_contents (${ms}ms) — ${short(editBody)}`);
+    }
+  }
+  await t.run('photoshop_execute_script', {
+    code: `app.activeDocument.save(); app.activeDocument.close(SaveOptions.SAVECHANGES); return { closed: true, active: app.activeDocument.name };`,
+  });
+  await t.run('photoshop_execute_script', {
+    code: `var doc=app.activeDocument; var target=null; function findNorm(c){for(var i=0;i<c.layers.length;i++){var L=c.layers[i]; if(L.typename==='LayerSet'){var n=findNorm(L);if(n)return n;} else if(String(L.kind)==='LayerKind.NORMAL'&&!L.isBackgroundLayer){return L;}} return null;} target=findNorm(doc); if(!target) throw new Error('No normal layer'); doc.activeLayer=target; return {active:target.name,kind:String(target.kind)};`,
+  });
+  await t.run('photoshop_replace_smart_object_contents', { file_path: testPng }, { expectError: true });
+  await t.run('photoshop_replace_smart_object_contents', {}, { expectError: true });
+
+  console.log('\n=== Phase 11: Image document ops ===');
+  await t.run('photoshop_resize_image', { width: 640, height: 480 });
+  await t.run('photoshop_crop_document', { left: 0, top: 0, right: 600, bottom: 450 });
+
+  console.log('\n=== Phase 12: History ===');
+  await t.run('photoshop_get_history');
+  await t.run('photoshop_undo', { steps: 1 });
+  await t.run('photoshop_redo', { steps: 1 });
+
+  console.log('\n=== Phase 13: Actions ===');
+  await t.run('photoshop_execute_script', {
+    code: 'return { documents: app.documents.length, active: app.activeDocument.name };',
+  });
+  await t.run('photoshop_play_action', undefined, {
+    skip: 'requires a real Actions palette entry — environment-specific',
+  });
+
+  console.log('\n=== Phase 14: Recipes ===');
+  await t.run('photoshop_execute_script', {
+    code: `var doc=app.activeDocument; for (var i=0;i<doc.artLayers.length;i++){var L=doc.artLayers[i]; if(String(L.kind)=='LayerKind.NORMAL'&&L.name.indexOf('Renamed')>=0){doc.activeLayer=L;break;}} return {active:doc.activeLayer.name,kind:String(doc.activeLayer.kind)};`,
+  });
+  await t.run('photoshop_recipe_frequency_separation', { radius_px: 6 });
+  await t.run('photoshop_undo', { steps: 1 });
+  await t.run('photoshop_recipe_enhance_portrait', { intensity: 'low', skin_smoothing: true });
+  await t.run('photoshop_undo', { steps: 1 });
+  await t.run('photoshop_recipe_remove_background', { feather_px: 1, keep_shadow: false }, {
+    skip: 'requires a recognizable subject in the active layer — synthetic test canvas has none',
+  });
+  await t.run('photoshop_undo', { steps: 1 });
+  await t.run('photoshop_recipe_apply_color_grade', { preset: 'warm_film' });
+  await t.run('photoshop_undo', { steps: 1 });
+  await t.run('photoshop_recipe_organize_layers', { auto_group: true, preserve: true });
+  await t.run('photoshop_recipe_prepare_for_web', { quality: 8 });
+  await t.run('photoshop_recipe_export_social_variants', {
+    platforms: ['instagram_post', 'x_post'],
+  });
+  await t.run('photoshop_recipe_batch_mockup_replace', undefined, {
+    skip: 'requires Smart Object mockup PSD — not part of automated canvas setup',
+  });
+  await t.run('photoshop_recipe_gradient_fade', { direction: 'bottom_to_top' });
+  await t.run('photoshop_undo', { steps: 1 });
+  await t.run('photoshop_execute_script', {
+    code: `var doc=app.activeDocument; var target=null; function findRaster(c){for(var i=0;i<c.layers.length;i++){var L=c.layers[i]; if(L.typename==='LayerSet'){var n=findRaster(L); if(n)return n;} else if(String(L.kind)==='LayerKind.NORMAL'&&!L.isBackgroundLayer){return L;}} return null;} target=findRaster(doc); if(!target) throw new Error('No raster layer'); doc.activeLayer=target; return {active:target.name,kind:String(target.kind)};`,
+  });
+  await t.run('photoshop_recipe_dodge_burn', { blend_mode: 'overlay' });
+  await t.run('photoshop_undo', { steps: 1 });
+  await t.run('photoshop_execute_script', {
+    code: `var doc=app.activeDocument; var target=null; function findRaster(c){for(var i=0;i<c.layers.length;i++){var L=c.layers[i]; if(L.typename==='LayerSet'){var n=findRaster(L); if(n)return n;} else if(String(L.kind)==='LayerKind.NORMAL'&&!L.isBackgroundLayer){return L;}} return null;} target=findRaster(doc); if(!target) throw new Error('No raster layer'); doc.activeLayer=target; return {active:target.name,kind:String(target.kind)};`,
+  });
+  await t.run('photoshop_select_rectangle', { left: 80, top: 80, right: 200, bottom: 200 });
+  const recipeAiSmoke = process.env.PHOTOSHOP_AI_SMOKE === '1';
+  await t.run('photoshop_recipe_remove_distraction', {
+    feather_px: 1,
+    ...(recipeAiSmoke ? {} : { use_generative: false }),
+  });
+  await t.run('photoshop_undo', { steps: 1 });
+  await t.run('photoshop_recipe_sky_blend', {
+    sky_image_path: testPng,
+    horizon_pct: 45,
+    ...(recipeAiSmoke ? {} : { use_native_sky: false }),
+  });
+  await t.run('photoshop_undo', { steps: 1 });
+
+  const generativeSkip =
+    process.env.PHOTOSHOP_AI_SMOKE === '1'
+      ? undefined
+      : 'set PHOTOSHOP_AI_SMOKE=1 for live generative credit tests';
+
+  console.log('\n=== Phase 14b: Generative & Neural AI ===');
+  await t.run('photoshop_select_rectangle', { left: 100, top: 100, right: 250, bottom: 250 });
+  await t.run('photoshop_generative_fill', { prompt: 'soft gradient' }, { skip: generativeSkip });
+  await t.run('photoshop_generative_remove', { feather_px: 0 }, { skip: generativeSkip });
+  await t.run('photoshop_generative_expand', { prompt: 'extend background', direction: 'all' }, {
+    skip: generativeSkip,
+  });
+  await t.run('photoshop_generative_upscale', { target_scale: 2 }, { skip: generativeSkip });
+  await t.run('photoshop_sky_replacement', { sky_image_path: testPng }, { skip: generativeSkip });
+  await t.run('photoshop_generate_image', { prompt: 'abstract gradient', width: 512, height: 512 }, {
+    skip: generativeSkip,
+  });
+  await t.run(
+    'photoshop_neural_filter',
+    { filter: 'skin_smoothing', smoothness: 40, blur: 40 },
+    { skip: generativeSkip ?? 'requires UXP bridge plugin panel open' }
+  );
+
+  console.log('\n=== Phase 15: State, preview, save ===');
+  await t.run('photoshop_get_preview', { max_dimension_px: 512, quality: 7 });
+  await t.run('photoshop_save_document', {
+    path: join(EXPORT_DIR, 'mcp-test-save.psd'),
+    format: 'PSD',
+  });
+  await t.run('photoshop_save_document', {
+    path: join(EXPORT_DIR, 'mcp-test-save.jpg'),
+    format: 'JPEG',
+    quality: 9,
+  });
+
+  console.log('\n=== Phase 16: Delete, rasterize & destructive ===');
+  await t.run('photoshop_create_layer', { name: 'MCP_DeleteMe' });
+  await t.run('photoshop_delete_layer');
+  await t.run('photoshop_create_text_layer', {
+    text: 'Rasterize Target',
+    x: 80,
+    y: 80,
+    fontSize: 24,
+  });
+  await t.run('photoshop_execute_script', {
+    code: `for (var i=0;i<app.activeDocument.artLayers.length;i++){var L=app.activeDocument.artLayers[i]; if(String(L.kind)=='LayerKind.TEXT'&&L.name.indexOf('Rasterize')>=0){app.activeDocument.activeLayer=L; break;}} return {active:app.activeDocument.activeLayer.name,kind:String(app.activeDocument.activeLayer.kind)};`,
+  });
+  await t.run('photoshop_rasterize_layer');
+  await t.run('photoshop_merge_visible_layers');
+  await t.run('photoshop_flatten_image');
+
+  console.log('\n=== Phase 17: Cleanup ===');
+  await t.run('photoshop_close_document', { save: false });
+
+  console.log('\n=== Phase 18: Prompt templates (16 recipes) ===');
+  const prompts = [
+    ['ps.remove_background', { feather_px: '1', keep_shadow: 'false' }],
+    ['ps.enhance_portrait', { intensity: 'medium', skin_smoothing: 'true' }],
+    ['ps.prepare_for_web', { quality: '8' }],
+    ['ps.export_social_variants', { platforms: 'instagram_post,x_post' }],
+    ['ps.apply_color_grade', { preset: 'warm' }],
+    ['ps.frequency_separation', { radius_px: '6' }],
+    ['ps.batch_mockup_replace', { smart_object_layer_name: 'Screen', assets_dir: assetsDir }],
+    ['ps.organize_layers', { auto_group: 'true', preserve: 'true' }],
+    ['ps.gradient_fade', { direction: 'bottom_to_top' }],
+    ['ps.sky_blend', { sky_image_path: '/tmp/photoshop-mcp-test.png', horizon_pct: '45' }],
+    ['ps.dodge_burn', { blend_mode: 'overlay' }],
+    ['ps.remove_distraction', { feather_px: '1' }],
+    ['ps.split_carousel', { slides: '3' }],
+    ['ps.batch_watermark', { assets_dir: assetsDir, text: '© photoshop-mcp test' }],
+    ['ps.passport_photo', { spec: 'us_2x2' }],
+  ] as const;
+
+  for (const [name, args] of prompts) {
+    const started = Date.now();
+    try {
+      const pr = await client.getPrompt({ name, arguments: args });
+      const text = pr.messages
+        .map((m) => (m.content.type === 'text' ? m.content.text : ''))
+        .join('\n');
+      const ms = Date.now() - started;
+      const ok = text.includes('photoshop_recipe_');
+      t.recordPrompt(`prompt:${name}`, ok ? 'pass' : 'fail', short(text), ms);
+      console.log(`  ${ok ? 'OK' : 'FAIL'}  prompt:${name} (${ms}ms)`);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      t.recordPrompt(`prompt:${name}`, 'fail', msg, 0);
+      console.log(`  FAIL prompt:${name} — ${msg}`);
+    }
+  }
+
+  t.summary();
+  await transport.close();
+
+  const failed = t.getResults().filter((r) => r.outcome === 'fail').length;
+  const requiredTools = 82;
+  const passedTools = t.getResults().filter((r) => r.outcome === 'pass' && r.name.startsWith('photoshop_')).length;
+  console.log(`\nTool coverage: ${passedTools}/${requiredTools} atomic+recipe tools passed.`);
+  process.exit(failed > 0 ? 1 : 0);
+}
+
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

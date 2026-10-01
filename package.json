@@ -1,0 +1,89 @@
+{
+  "name": "@deepartisan/ps-mcp",
+  "version": "1.7.15",
+  "description": "Deep Artisan fork of alisaitteke/photoshop-mcp: stdio MCP server for Adobe Photoshop (ExtendScript via osascript), telemetry and web UI removed, ps_catalog/ps_do facade.",
+  "main": "dist/index.js",
+  "type": "module",
+  "bin": {
+    "ps-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "uxp-plugin",
+    "README.md",
+    "README-DEEPARTISAN.md",
+    "LICENSE",
+    "LICENSE-DEEPARTISAN"
+  ],
+  "scripts": {
+    "dev": "tsc --watch",
+    "build": "npm run build:server && npm run build:uxp",
+    "build:server": "node scripts/clean-dist.mjs && tsc",
+    "start": "node dist/index.js",
+    "lint": "eslint src --ext .ts",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "spike:photoshop-actions": "tsx scripts/spike-photoshop-actions.ts",
+    "spike:2026": "tsx scripts/spike-2026-features.ts",
+    "spike:issue-2": "tsx scripts/spike-issue-2.ts",
+    "verify:photoshop-prompts": "tsx scripts/verify-photoshop-prompt-coverage.ts",
+    "test:mcp-local": "tsx scripts/test-mcp-local.ts",
+    "test:mcp-all": "tsx scripts/test-all-mcp-tools.ts",
+    "test:intent-expansion": "tsx scripts/test-intent-expansion-local.ts",
+    "test:unit": "vitest run",
+    "verify:tool-counts": "tsx scripts/verify-tool-counts.ts",
+    "build:uxp": "node scripts/pack-uxp.mjs"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "photoshop",
+    "adobe",
+    "automation",
+    "ai",
+    "ai-agents",
+    "cursor",
+    "claude",
+    "image-editing",
+    "typescript",
+    "extendscript",
+    "developer-tools",
+    "vue",
+    "hono"
+  ],
+  "author": "Ali Sait Teke (https://alisait.com)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alisaitteke/photoshop-mcp.git"
+  },
+  "homepage": "https://photoshop-mcp.com/",
+  "bugs": {
+    "url": "https://github.com/alisaitteke/photoshop-mcp/issues"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "@types/node": "^22.10.5",
+    "@typescript-eslint/eslint-plugin": "^8.20.0",
+    "@typescript-eslint/parser": "^8.20.0",
+    "eslint": "^9.18.0",
+    "globals": "^17.9.0",
+    "prettier": "^3.4.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vitest": "^4.1.10"
+  },
+  "packageManager": "pnpm@10.33.0+sha512.10568bb4a6afb58c9eb3630da90cc9516417abebd3fabbe6739f0ae795728da1491e9db5a544c76ad8eb7570f5c4bb3d6c637b2cb41bfdcdb47fa823c8649319",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}
