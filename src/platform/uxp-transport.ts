@@ -3,7 +3,7 @@
  *
  * Основной путь ps-mcp — ExtendScript через osascript. Он ломается в двух случаях:
  * Photoshop модальный (диалог/прогресс — Apple-events не исполняются, код
- * photoshop_busy / script_timeout) и если Adobe снимет ExtendScript. UXP-плагин
+ * photoshop_busy / extendscript_timeout) и если Adobe снимет ExtendScript. UXP-плагин
  * (uxp-plugin/) сидит внутри Photoshop, опрашивает наш HTTP-сервер (только при
  * PS_MCP_UXP=1) и исполняет команды через UXP API (batchPlay, DOM, saveAs).
  *
@@ -27,7 +27,7 @@ export function uxpMode(env: NodeJS.ProcessEnv = process.env): UxpMode {
 
 /** Ошибка основного пути, после которой имеет смысл пробовать UXP. Чистая. */
 export function isTransportFailure(text: string): boolean {
-  return /Photoshop busy|photoshop_busy|Script execution timeout|script_timeout|waiting in the execution queue|osascript|-2741|AppleEvent|Apple event/i.test(
+  return /Photoshop busy|photoshop_busy|Script execution timeout|extendscript_timeout|script_timeout|waiting in the execution queue|osascript|-2741|AppleEvent|Apple event/i.test(
     text,
   );
 }

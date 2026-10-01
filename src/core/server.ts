@@ -7,7 +7,12 @@ import {
   GetPromptRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { Logger } from '../utils/logger.js';
-import { capture, onMcpClientConnected, onMcpClientDisconnected, recordMcpToolCall } from '../analytics/index.js';
+import {
+  onMcpClientConnected,
+  onMcpClientDisconnected,
+  recordMcpPromptRequest,
+  recordMcpToolCall,
+} from '../analytics/index.js';
 import { ToolRegistry, ToolDefinition } from './tool-registry.js';
 import { PromptRegistry } from './prompt-registry.js';
 import { Session } from './session.js';
@@ -40,9 +45,11 @@ import { createColorAdjustmentTools } from '../tools/color-adjustment-tools.js';
 import { createDataTools } from '../tools/data-tools.js';
 import { createStackTools } from '../tools/stack-tools.js';
 import { createExportTools } from '../tools/export-tools.js';
+import { createArtboardTools } from '../tools/artboard-tools.js';
 import { ensureUxpBridgeServer } from '../platform/uxp-bridge-server.js';
 // Deep Artisan (17.09): фасад ps_catalog/ps_do поверх реестра (PS_MCP_FACADE=1)
 import { buildFacadeTools, facadeEnabled, FACADE_TOOL_NAMES } from '../da/facade.js';
+import { probePhotoshopEngine } from './ping-engine.js';
 
 export interface PhotoshopMCPServerOptions {
   serverVersion: string;
@@ -102,11 +109,11 @@ export class PhotoshopMCPServer {
       tool: {
         name: 'photoshop_ping',
         description:
-          'Verify Photoshop is installed and reachable on this machine.\n\n' +
-          'Use when: once at session start if connection status is unknown.\n' +
-          'Do NOT use when: on every tool call — call once, then use photoshop_get_state.\n\n' +
-          'Returns: connection success or failure message.\n' +
-          'Preconditions: none. Side effects: may trigger Photoshop detection.',
+          'Verify that the Photoshop scripting engine can run a script.\n\n' +
+          'Use when: once at session start, and after extendscript_timeout until this call succeeds.\n' +
+          'Do NOT use when: on every tool call — after a successful ping, use photoshop_get_state. Do not call get_state or get_layers while this ping is still failing.\n\n' +
+          'Returns: "Successfully connected to Photoshop" only after a short script runs inside Photoshop. While a previous script is still running, returns extendscript_timeout — retry photoshop_ping. If that timeout happens while the OS drive has under 10 GB free, returns scratch_disk_full instead: free space on the scratch disk and restart Photoshop. If Photoshop is not installed or not running, returns a failure string and does not launch the app.\n' +
+          'Preconditions: none. Side effects: may trigger Photoshop detection. Does not launch Photoshop.',
         inputSchema: { type: 'object', properties: {} },
       },
       handler: async () => this.pingPhotoshop(),
@@ -161,6 +168,7 @@ export class PhotoshopMCPServer {
     this.registerToolDefinitions(createDataTools(connection), 'data');
     this.registerToolDefinitions(createStackTools(connection), 'stack');
     this.registerToolDefinitions(createExportTools(connection), 'export');
+    this.registerToolDefinitions(createArtboardTools(connection), 'artboard');
     this.registerToolDefinitions(createRecipeTools(connection), 'recipe');
     // Deep Artisan: фасад регистрируется всегда (ps_do доступен и без
     // PS_MCP_FACADE), но при PS_MCP_FACADE=1 клиенту виден ТОЛЬКО он
@@ -193,10 +201,7 @@ export class PhotoshopMCPServer {
       const name = request.params.name;
       const args = (request.params.arguments as Record<string, string>) || {};
       this.logger.debug(`Prompt requested: ${name}`);
-      capture('mcp_prompt_requested', {
-        prompt_name: name,
-        event_source: 'mcp',
-      });
+      recordMcpPromptRequest(name, this.promptRegistry.count());
       return await this.promptRegistry.get(name, args);
     });
 
@@ -225,18 +230,7 @@ export class PhotoshopMCPServer {
   }
 
   private async pingPhotoshop() {
-    const connection = this.session.getConnection();
-    const isConnected = await connection.ping();
-    return {
-      content: [
-        {
-          type: 'text' as const,
-          text: isConnected
-            ? 'Successfully connected to Photoshop'
-            : 'Failed to connect to Photoshop',
-        },
-      ],
-    };
+    return probePhotoshopEngine(this.session.getConnection());
   }
 
   private async getVersion() {

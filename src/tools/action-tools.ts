@@ -2,6 +2,7 @@ import { ToolDefinition, ToolResult } from '../core/tool-registry.js';
 import { PhotoshopConnection } from '../platform/connection.js';
 import { PhotoshopAPIFactory } from '../api/photoshop-api.js';
 import { ExtendScriptSnippets } from '../api/extendscript.js';
+import { resolveScriptTimeoutMs } from '../platform/script-timeout.js';
 
 export function createActionTools(connection: PhotoshopConnection): ToolDefinition[] {
   return [
@@ -37,6 +38,7 @@ export function createActionTools(connection: PhotoshopConnection): ToolDefiniti
           'IMPORTANT: Your code runs inside a wrapping IIFE. Use an explicit `return` to pass data back — ' +
           'a bare trailing expression returns undefined. Example: `return { ok: true };` ' +
           'Objects are serialized with toSource() and parsed automatically on macOS and Windows.\n' +
+          'Long scripts: pass timeout_ms (up to 600000) so the default 30s budget does not kill the job.\n' +
           'Preconditions: valid ExtendScript; active document if script expects one. Side effects: depends on code.',
         inputSchema: {
           type: 'object',
@@ -44,6 +46,13 @@ export function createActionTools(connection: PhotoshopConnection): ToolDefiniti
             code: {
               type: 'string',
               description: 'ExtendScript code to execute',
+            },
+            timeout_ms: {
+              type: 'number',
+              description:
+                'Script timeout in milliseconds (default 30000, max 600000). Override with env PHOTOSHOP_SCRIPT_TIMEOUT. Use for long loops, batch jobs, or large documents.',
+              minimum: 1000,
+              maximum: 600000,
             },
           },
           required: ['code'],
@@ -99,8 +108,11 @@ async function executeCustomScript(
     const apiFactory = new PhotoshopAPIFactory(connection);
     const api = await apiFactory.createAPI();
 
+    const timeoutMs = resolveScriptTimeoutMs(
+      typeof args.timeout_ms === 'number' ? args.timeout_ms : undefined
+    );
     const script = ExtendScriptSnippets.executeCustomScript(code);
-    const result = await api.executeScript(script);
+    const result = await api.executeScript(script, timeoutMs);
 
     return {
       content: [

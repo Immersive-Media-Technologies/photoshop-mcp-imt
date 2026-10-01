@@ -4,6 +4,206 @@ All notable changes to this project are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+Versions 1.x below are the upstream history of
+[alisaitteke/photoshop-mcp](https://github.com/alisaitteke/photoshop-mcp), kept as received.
+
+## [0.4.1] - 2026-10-01 — Immersive Media Technologies fork
+
+First public release of PS-MCP-IMT (the Immersive Media Technologies fork), based on upstream
+1.7.27 (2026-09-30). License: IMT Non-Commercial (`LICENSE`); upstream MIT notices in
+`THIRD-PARTY-NOTICES.md`.
+
+### Added
+
+- **UXP bridge as a second transport** (`uxp-plugin/`, `src/platform/uxp-*.ts`): a small UXP
+  panel plugin inside Photoshop polls the server (`127.0.0.1:38452`, on with `PS_MCP_UXP=1`) and
+  executes `state` / `layers` / `batchplay` / `eval_js` / `export_png` / `save` / `neural_filter`
+  inside `core.executeAsModal`. When ExtendScript cannot get through (Photoshop is modal —
+  `photoshop_busy`, a script timeout, an osascript error) and the plugin is alive, the read/save/
+  export tools fall back to UXP (`via: uxp` in the answer); `PS_MCP_UXP_PREFER=1` makes UXP the
+  first choice. The port is protected by a shared secret (`~/.deepartisan/state/uxp-bridge.token`,
+  mode 0600, header `X-DA-Bridge-Token`, 401 without it; `/health` stays open and reveals nothing).
+  `ps_uxp(action: ping | batchplay | script)` exposes batchPlay descriptors and UXP-context
+  JavaScript (with `await`) to the agent. `npm run build:uxp` packs the plugin into a `.ccx`.
+- **Facade** (`src/da/facade.ts`, `PS_MCP_FACADE=1`): the client sees 9 tools — `ps_catalog`,
+  `ps_do`, `ps_batch`, `ps_get_state`, `ps_get_layers`, `ps_save_document`, `ps_export_frame`,
+  `ps_execute_script`, `ps_recipe` — about 900 tokens of definitions instead of ~25 K for the full
+  set; every upstream tool remains reachable through `ps_do` by name.
+- **`photoshop_distort_layer`** — headless corner-pin / perspective of a layer: four target corners
+  in document coordinates → custom warp (`Trnf` + `warpCustom`, 4×4 mesh, Bézier handles solved
+  for the homography; `mode: perspective | bilinear`). Verified on Photoshop 2026 (27.9): the
+  classic `Trnf` + `quadrilateral` recipe is silently ignored in all 12 pixel/smart × abs/rel/center
+  × Qcsa/Qcs0 combinations (`scripts/probe/quad-matrix.jsx`); warp on a Smart Object yields a
+  different geometry, so a Smart Object without `rasterize: true` is an error, not silent damage.
+- **Honest errors when Photoshop is modal**: a dialog, a progress bar or Object Selection in
+  search mode stops Apple events — every call used to hang 30 s and return a generic timeout.
+  Now: timeout → 4 s liveness probe outside the queue → `photoshop_busy` with an instruction for
+  the user and an 8 s hold (repeat calls fail at once). `command_unavailable` for «the command is
+  not currently available» (a document-state condition, reported as such). Read-only tools
+  (`get_state` / `get_layers`) time out after 8 s (`PS_MCP_READ_TIMEOUT_MS`) so the UXP fallback
+  is fast.
+
+### Changed
+
+- Package identity → `@immersive-media-technologies/photoshop-mcp-imt` (repo-only, not on npm;
+  the binary is `photoshop-mcp-imt`).
+- **Telemetry removed.** Upstream's analytics (Rybbit, install cohorts, machine identification,
+  milestones) is replaced by a no-op module with the same interface; the product-feedback nudge
+  (`photoshop_submit_feedback`, `FEEDBACK_NUDGE`) is removed. The server sends nothing anywhere.
+- Upstream's standalone web UI, website, MCPB package, registry manifests, publish workflows and
+  brand assets are not part of this repository; dependencies reduced to
+  `@modelcontextprotocol/sdk` and `zod`.
+- Upstream merged through **1.7.27**: artboard tools, text style ranges, script-timeout control
+  (`PHOTOSHOP_SCRIPT_TIMEOUT`, `timeout_ms` on `execute_script`), Windows result decoding as
+  UTF-16, Firefly `syntheticFill` for Generate Image / Generative Remove, string escaping of recipe
+  history names and generative prompts, ping that fails while a script is still running, scratch-
+  disk-full diagnosis. Our `script_timeout` code (20.09) is folded into upstream's
+  `extendscript_timeout`.
+
+### Notes
+
+- Verified by us on **macOS, Photoshop 2026 (27.9–27.10), UXP 9.4.1, Node 26**. The Windows
+  transport (ExtendScript through COM, `cscript`) is inherited from upstream with the 1.7.21
+  UTF-16 fix and is not verified by us — reports welcome. The UXP plugin is host-agnostic; its
+  install path on Windows is the usual `%APPDATA%\Adobe\UXP\Plugins\External`.
+- Installing the `.ccx` by double click may fail with «Plugin Not Compatible» when Creative Cloud
+  does not list Photoshop; the manual layout (plugin folder + `PluginsInfo/v1/PS.json`) and UXP
+  Developer Tools both work — see README.
+
+## [1.7.27] - 2026-09-30
+
+[v1.7.26...v1.7.27](https://github.com/alisaitteke/photoshop-mcp/compare/v1.7.26...v1.7.27)
+
+### Fixed
+
+- A full scratch disk is `scratch_disk_full` instead of a generic script timeout. Photoshop's error `-25010` and the scratch-disk dialogs take this path. A startup timeout takes it too when the OS drive, the default scratch disk, is below Photoshop's 10 GB minimum free space.
+
+## [1.7.26] - 2026-09-30
+
+[v1.7.25...v1.7.26](https://github.com/alisaitteke/photoshop-mcp/compare/v1.7.25...v1.7.26)
+
+### Fixed
+
+- `photoshop_ping` runs a short script in Photoshop. A successful ping means the scripting engine finished that script. While a previous script is still running, ping returns `extendscript_timeout` instead of succeeding and leaving `photoshop_get_state` / `photoshop_get_layers` stuck on the open document.
+
+## [1.7.25] - 2026-09-30
+
+[v1.7.24...v1.7.25](https://github.com/alisaitteke/photoshop-mcp/compare/v1.7.24...v1.7.25)
+
+### Added
+
+- Jev can run 26 safe commands and recipes instantly, and short chains of up to four such as “black and white, then opacity 50”, with no LLM call. Hover the route chip to see why a route was picked. Merge and flatten still go through the Action Plan.
+
+## [1.7.24] - 2026-09-28
+
+[v1.7.23...v1.7.24](https://github.com/alisaitteke/photoshop-mcp/compare/v1.7.23...v1.7.24)
+
+### Added
+
+- Standalone chat can be started with `npx -p @alisaitteke/photoshop-mcp ui`. The existing `photoshop-mcp-ui` command still works.
+
+## [1.7.23] - 2026-09-28
+
+[v1.7.22...v1.7.23](https://github.com/alisaitteke/photoshop-mcp/compare/v1.7.22...v1.7.23)
+
+### Added
+
+- Standalone UI can route each prompt through Jev (TypeSafe System One) before any language model runs. When the request is exactly one of 16 safe commands with every value given (undo, opacity, blend mode, remove background, and others), it runs in Photoshop with no LLM call. Multi-step requests and hard-to-undo actions such as merge or flatten stay on the Action Plan. Opt-in via Settings → Routing or `TYPESAFE_API_KEY`. With no key, nothing is sent to TypeSafe and the UI works as before.
+
+### Changed
+
+- Chat tool activity is a step timeline with a short title and parameters. Preview images are stored beside the chat and loaded on demand, instead of being embedded in the chat record.
+
+## [1.7.22] - 2026-09-27
+
+[v1.7.21...v1.7.22](https://github.com/alisaitteke/photoshop-mcp/compare/v1.7.21...v1.7.22)
+
+### Added
+
+- Prompt fetches are aggregated as `mcp_prompt_batch` on their own 3s / 60s timers, separate from tool batches, so a full catalog prefetch shows up as one event. Each `prompts/get` still emits `mcp_prompt_requested`.
+
+### Changed
+
+- Recipe and guide prompts no longer tell the agent to call `prompts/get` on another prompt. Those steps name the tools directly, so opening one prompt does not chain into the rest of the catalog.
+
+## [1.7.21] - 2026-09-25
+
+[v1.7.20...v1.7.21](https://github.com/alisaitteke/photoshop-mcp/compare/v1.7.20...v1.7.21)
+
+### Fixed
+
+- Generative tools no longer fail to parse in ExtendScript. Object shorthand `{ wait }` in the six Firefly JSX templates is written as `wait: wait`, which Photoshop's ES3 engine accepts. Thanks **onurleventogluu-ui** for the report in [#41](https://github.com/alisaitteke/photoshop-mcp/issues/41) and the fix in [#42](https://github.com/alisaitteke/photoshop-mcp/pull/42).
+
+## [1.7.20] - 2026-09-22
+
+[v1.7.19...v1.7.20](https://github.com/alisaitteke/photoshop-mcp/compare/v1.7.19...v1.7.20)
+
+Shaped by anonymous product feedback.
+
+### Fixed
+
+- Generative remove calls Firefly `syntheticFill` instead of empty `removeTool` / `generativeFill` descriptors. Those descriptors make Photoshop return Error 8 Syntax error.
+- Selection expand, contract, and feather use Action Manager when the DOM command is unavailable. `photoshop_select_rectangle` accepts `mode` (`replace`, `add`, `subtract`, `intersect`).
+- Generate Image uses the same Firefly `syntheticFill` path. The tool description names it as Photoshop Generate Image / ImageGen.
+- Photoshop Error 8 / "Syntax error" is classified as `extendscript_runtime_error` instead of `unknown`.
+
+## [1.7.19] - 2026-09-21
+
+[v1.7.18...v1.7.19](https://github.com/alisaitteke/photoshop-mcp/compare/v1.7.18...v1.7.19)
+
+### Fixed
+
+- Windows: non-ASCII text returned from Photoshop (CJK document and layer names, localized errors) is no longer mojibake. Script results are written as UTF-16 instead of being printed through `cscript` stdout. Thanks **DENGGL2** for the report in [#40](https://github.com/alisaitteke/photoshop-mcp/issues/40).
+
+### Changed
+
+- Release publish waits until the new version is visible on npm (publish-time malware scan) before refreshing release notes and publishing MCP Registry metadata.
+
+## [1.7.18] - 2026-09-21
+
+[v1.7.17...v1.7.18](https://github.com/alisaitteke/photoshop-mcp/compare/v1.7.17...v1.7.18)
+
+Shaped by anonymous product feedback. Rybbit assigns generated session nicknames (not real names or accounts) — thank you **Coral Hamster** and **Scarlet Turtle**.
+
+### Added
+
+- Artboard tools: `photoshop_list_artboards`, `photoshop_create_artboard`, `photoshop_set_active_artboard`, `photoshop_export_artboards`. `photoshop_get_state` includes artboard bounds; `photoshop_export_as` accepts `artboard_id`. Thanks **Coral Hamster** for asking for artboard / multi-screen workflows.
+- `timeout_ms` on `photoshop_execute_script` (max 600s) and env `PHOTOSHOP_SCRIPT_TIMEOUT`. Batch recipes and multi-file exports use a 600s script budget. Thanks **Coral Hamster** for reporting long scripts timing out.
+- `photoshop_list_documents` reports `artboard_count` and `saved` per open tab; `photoshop_get_state` includes `openDocumentCount`.
+- Typography: `photoshop_set_text_style` (tracking, leading, paragraph box, alignment) and `photoshop_set_text_ranges` (mixed font/color in one layer). `photoshop_create_text_layer` accepts the same style fields. Thanks **Scarlet Turtle** for the tracking / leading / mixed-range / text-box request.
+
+### Changed
+
+- Product-feedback ping is on by default but opt-out (`PSMCP_FEEDBACK=0`, or MCPB **Product feedback prompts**). Hosts ask in the user's conversation language, in first person.
+
+### Fixed
+
+- Windows script-queue timeout now starts at dequeue (same two-phase model as macOS) and kills hung `cscript` processes.
+- Script timeouts classify as `extendscript_timeout` instead of `unknown` / `generative_timeout`. After a timeout, the envelope points at `photoshop_ping` (Photoshop may still be running the previous JSX). `photoshop_execute_script` timeouts suggest retrying once with `timeout_ms: 180000`.
+
+## [1.7.17] - 2026-09-18
+
+[v1.7.16...v1.7.17](https://github.com/alisaitteke/photoshop-mcp/compare/v1.7.16...v1.7.17)
+
+### Other
+
+- Delay the MCP feedback nudge until 15 minutes after the first ping. (`e1def0e`)
+- Ask first-time MCP users for product feedback after ping. (`680860e`)
+- Restore the v1.1+ blurb in the Turkish README. (`dc43180`)
+- Remove the outdated v1.1+ blurb from the Turkish README. (`0c63252`)
+
+## [1.7.16] - 2026-09-18
+
+[v1.7.15...v1.7.16](https://github.com/alisaitteke/photoshop-mcp/compare/v1.7.15...v1.7.16)
+
+### Other
+
+- Treat Cursor stdio respawns as one analytics session and cache Photoshop detection. (`fc4734c`)
+- Show GitHub contributors in the README so credit is visible. (`437efc3`)
+
+### Version bumps
+
+- 1.7.16 (`e336fde`)
 
 ## [1.7.15] - 2026-09-16
 
@@ -13,6 +213,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add Cursor plugin packaging so the MCP list can show the Photoshop logo. (`6e931d7`)
 - Prefer native Remove Background and unlock locked Background layers in the recipe. (`e8d3f8e`)
+
+### Version bumps
+
+- 1.7.15 (`3b28983`)
 
 ## [1.7.14] - 2026-09-15
 
@@ -537,4 +741,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 1.1.1 (`5cac9c1`)
 - 1.1.0 (`6e1c1f0`)
 - 1.0.0 (`17d8d91`)
-

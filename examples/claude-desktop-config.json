@@ -1,11 +1,12 @@
 {
   "mcpServers": {
     "photoshop": {
-      "command": "npx",
-      "args": ["-y", "@alisaitteke/photoshop-mcp"],
+      "command": "node",
+      "args": ["/ABSOLUTE/PATH/TO/photoshop-mcp-imt/dist/index.js"],
       "env": {
-        "LOG_LEVEL": "1",
-        "PHOTOSHOP_PATH": ""
+        "PS_MCP_FACADE": "1",
+        "PS_MCP_UXP": "1",
+        "LOG_LEVEL": "1"
       }
     }
   }

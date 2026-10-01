@@ -302,7 +302,7 @@ export function buildFacadeTools(
         name: 'ps_uxp',
         description:
           'Photoshop UXP bridge (backup transport, runs INSIDE Photoshop via the Deep Artisan Bridge plugin). ' +
-          'Use when ExtendScript calls fail with photoshop_busy / script_timeout, or for batchPlay-only features. ' +
+          'Use when ExtendScript calls fail with photoshop_busy / extendscript_timeout, or for batchPlay-only features. ' +
           'action: ping | batchplay (descriptors: action descriptor JSON array) | script (code: JS with photoshop/uxp/params in scope, use return).',
         inputSchema: {
           type: 'object',

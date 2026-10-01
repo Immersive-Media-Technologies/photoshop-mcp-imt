@@ -2,6 +2,13 @@ import { ToolDefinition, ToolResult } from '../core/tool-registry.js';
 import { PhotoshopConnection } from '../platform/connection.js';
 import { PhotoshopAPIFactory } from '../api/photoshop-api.js';
 import { ExtendScriptSnippets } from '../api/extendscript.js';
+import { atomicFailure, atomicFailureFromError, atomicSuccess, parseSnippetResult, runSnippet } from './atomic-shared.js';
+import {
+  emitTextRangesLiteral,
+  emitTextStyleLiteral,
+  parseTextRangesArg,
+  parseTextStyleArgs,
+} from './text-style-options.js';
 
 export function createTextTools(connection: PhotoshopConnection): ToolDefinition[] {
   return [
@@ -123,6 +130,118 @@ export function createTextTools(connection: PhotoshopConnection): ToolDefinition
         },
       },
       handler: async (args) => updateTextContent(connection, args),
+    },
+    {
+      tool: {
+        name: 'photoshop_set_text_style',
+        description:
+          'Set layer-wide typography on the active text layer: tracking, leading, point vs paragraph box, alignment, font, size, color.\n\n' +
+          'Users often say: letter spacing, tracking, line height, leading, text box width, paragraph text, 字间距, 行高, 文本框.\n\n' +
+          'Use when: tightening/loosening type, setting line height, converting to a wrapped paragraph box, or batching several text attributes in one undo-friendly call.\n' +
+          'Do NOT use when: creating a new layer — pass the same fields on photoshop_create_text_layer.\n' +
+          'Do NOT use when: mixed fonts/colors inside one layer — use photoshop_set_text_ranges.\n' +
+          'Do NOT use execute_script for tracking/leading/box.\n\n' +
+          'Returns: JSON { ok, summary, details: { style } }.\n' +
+          'Preconditions: active text layer. Side effects: mutates TextItem attributes.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            tracking: {
+              type: 'number',
+              description: 'Character spacing in 1/1000 em (−1000 to 10000)',
+            },
+            leading: {
+              type: 'number',
+              description: 'Line height in points. Sets auto_leading false.',
+              minimum: 0.1,
+            },
+            auto_leading: {
+              type: 'boolean',
+              description: 'Use Photoshop auto leading',
+            },
+            kind: {
+              type: 'string',
+              enum: ['point', 'paragraph'],
+              description: 'point or paragraph (wrapped) text',
+            },
+            box_width: {
+              type: 'number',
+              description: 'Paragraph box width in pixels (implies kind=paragraph)',
+              minimum: 1,
+            },
+            box_height: {
+              type: 'number',
+              description: 'Paragraph box height in pixels (implies kind=paragraph)',
+              minimum: 1,
+            },
+            alignment: {
+              type: 'string',
+              enum: [
+                'LEFT',
+                'CENTER',
+                'RIGHT',
+                'LEFTJUSTIFIED',
+                'CENTERJUSTIFIED',
+                'RIGHTJUSTIFIED',
+                'FULLYJUSTIFIED',
+              ],
+              description: 'Justification (same enum as photoshop_set_text_alignment)',
+            },
+            fontName: {
+              type: 'string',
+              description: 'Font display or PostScript name',
+            },
+            fontSize: {
+              type: 'number',
+              description: 'Size in points',
+              minimum: 1,
+            },
+            red: { type: 'number', description: 'Red 0–255', minimum: 0, maximum: 255 },
+            green: { type: 'number', description: 'Green 0–255', minimum: 0, maximum: 255 },
+            blue: { type: 'number', description: 'Blue 0–255', minimum: 0, maximum: 255 },
+          },
+        },
+      },
+      handler: async (args) => setTextStyle(connection, args),
+    },
+    {
+      tool: {
+        name: 'photoshop_set_text_ranges',
+        description:
+          'Apply mixed fonts, sizes, and colors inside a single text layer (Action Manager textStyleRange).\n\n' +
+          'Users often say: mixed type, two fonts in one line, multicolor text, 混排, 同一文字层.\n\n' +
+          'Use when: one layer must contain more than one font or color. from is inclusive, to is exclusive (JavaScript slice / ExtendScript string indexes).\n' +
+          'Do NOT use when: the whole layer shares one style — use photoshop_set_text_style.\n' +
+          'Do NOT split into extra layers for mixed type unless this tool errors.\n\n' +
+          'Returns: JSON { ok, summary, details: { style, ranges } }.\n' +
+          'Preconditions: active text layer. Unspecified gaps keep the layer default style. Side effects: rewrites character styles; restores tracking/leading/box afterward.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            ranges: {
+              type: 'array',
+              description: 'Non-overlapping character spans (from inclusive, to exclusive)',
+              minItems: 1,
+              maxItems: 64,
+              items: {
+                type: 'object',
+                properties: {
+                  from: { type: 'number', description: 'Start index (inclusive)', minimum: 0 },
+                  to: { type: 'number', description: 'End index (exclusive)' },
+                  fontName: { type: 'string', description: 'Font display or PostScript name for this span' },
+                  fontSize: { type: 'number', description: 'Size in points', minimum: 1 },
+                  red: { type: 'number', minimum: 0, maximum: 255 },
+                  green: { type: 'number', minimum: 0, maximum: 255 },
+                  blue: { type: 'number', minimum: 0, maximum: 255 },
+                },
+                required: ['from', 'to'],
+              },
+            },
+          },
+          required: ['ranges'],
+        },
+      },
+      handler: async (args) => setTextRanges(connection, args),
     },
   ];
 }
@@ -298,5 +417,46 @@ async function updateTextContent(
       ],
       isError: true,
     };
+  }
+}
+
+async function setTextStyle(
+  connection: PhotoshopConnection,
+  args: Record<string, unknown>
+): Promise<ToolResult> {
+  const parsed = parseTextStyleArgs(args, { requireSome: true });
+  if (parsed.error) return atomicFailure(parsed.error);
+
+  try {
+    const raw = await runSnippet(connection, ExtendScriptSnippets.setTextStyle(emitTextStyleLiteral(parsed.style)));
+    const details = parseSnippetResult(raw);
+    if (!details) {
+      return atomicFailureFromError(new Error(`Unparseable text style result: ${String(raw)}`));
+    }
+    const style = details.style && typeof details.style === 'object' ? (details.style as Record<string, unknown>) : details;
+    const tracking = typeof style.tracking === 'number' ? ` tracking=${style.tracking}` : '';
+    const kind = typeof style.kind === 'string' ? ` ${style.kind}` : '';
+    return atomicSuccess(`Text style updated${kind}${tracking}`, details);
+  } catch (error) {
+    return atomicFailureFromError(error);
+  }
+}
+
+async function setTextRanges(
+  connection: PhotoshopConnection,
+  args: Record<string, unknown>
+): Promise<ToolResult> {
+  const parsed = parseTextRangesArg(args);
+  if (parsed.error) return atomicFailure(parsed.error);
+
+  try {
+    const raw = await runSnippet(connection, ExtendScriptSnippets.setTextRanges(emitTextRangesLiteral(parsed.ranges)));
+    const details = parseSnippetResult(raw);
+    if (!details) {
+      return atomicFailureFromError(new Error(`Unparseable text ranges result: ${String(raw)}`));
+    }
+    return atomicSuccess(`Applied ${parsed.ranges.length} text range(s)`, details);
+  } catch (error) {
+    return atomicFailureFromError(error);
   }
 }

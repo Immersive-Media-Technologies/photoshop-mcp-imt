@@ -55,7 +55,7 @@ describe('uxp transport (pure)', () => {
   it('isTransportFailure — только отказы транспорта, не ошибки Photoshop по существу', () => {
     expect(isTransportFailure('Error: Photoshop busy: it is not responding to scripts')).toBe(true);
     expect(isTransportFailure('Script execution timeout')).toBe(true);
-    expect(isTransportFailure('{"code":"script_timeout"}')).toBe(true);
+    expect(isTransportFailure('{"code":"extendscript_timeout"}')).toBe(true);
     expect(isTransportFailure('layer not found')).toBe(false);
     expect(isTransportFailure('no active document')).toBe(false);
   });

@@ -3,6 +3,8 @@ import { PhotoshopConnection } from '../platform/connection.js';
 import { PhotoshopAPIFactory } from '../api/photoshop-api.js';
 import { ExtendScriptSnippets } from '../api/extendscript.js';
 import { READ_SCRIPT_TIMEOUT_MS } from './state-tools.js';
+import { atomicFailure, atomicFailureFromError, atomicSuccess, parseSnippetResult } from './atomic-shared.js';
+import { emitTextStyleLiteral, hasTextStyle, parseTextStyleArgs } from './text-style-options.js';
 
 export function createLayerTools(connection: PhotoshopConnection): ToolDefinition[] {
   return [
@@ -42,11 +44,13 @@ export function createLayerTools(connection: PhotoshopConnection): ToolDefinitio
       tool: {
         name: 'photoshop_create_text_layer',
         description:
-          'Create a text layer with content, position, font size, and optional font.\n\n' +
+          'Create a text layer with content, position, font, and optional typography (tracking, leading, paragraph box, alignment, color).\n\n' +
+          'Users often say: add title, letter spacing, line height, text box, 字间距, 行高, 排版.\n\n' +
           'Use when: adding labels, titles, or typography to the design.\n' +
-          'Do NOT use when: editing existing text — use photoshop_update_text_content.\n\n' +
-          'Returns: layer name, text, position, fontSize, font (when fontName set), context.\n' +
-          'Use photoshop_list_fonts to discover font names; photoshop_set_text_font to change font later.\n' +
+          'Do NOT use when: editing existing text — use photoshop_update_text_content / photoshop_set_text_style.\n' +
+          'Do NOT use execute_script for tracking/leading/box — pass those fields here.\n\n' +
+          'Returns: JSON { ok, summary, details: { layerName, text, style, context } }.\n' +
+          'Use photoshop_list_fonts to discover font names; photoshop_set_text_font / photoshop_set_text_style to change later.\n' +
           'Preconditions: active document. Side effects: adds text layer.',
         inputSchema: {
           type: 'object',
@@ -75,6 +79,50 @@ export function createLayerTools(connection: PhotoshopConnection): ToolDefinitio
               description:
                 'Optional font display or PostScript name (resolved via app.fonts; see photoshop_list_fonts)',
             },
+            tracking: {
+              type: 'number',
+              description: 'Character spacing in 1/1000 em (−1000 to 10000). Photoshop tracking.',
+            },
+            leading: {
+              type: 'number',
+              description: 'Line height in points. Sets auto_leading false.',
+              minimum: 0.1,
+            },
+            auto_leading: {
+              type: 'boolean',
+              description: 'Use Photoshop auto leading (ignores leading when true)',
+            },
+            kind: {
+              type: 'string',
+              enum: ['point', 'paragraph'],
+              description: 'point = single-line; paragraph = wrapped text box (default point unless box_width/height set)',
+            },
+            box_width: {
+              type: 'number',
+              description: 'Paragraph text box width in pixels (implies kind=paragraph)',
+              minimum: 1,
+            },
+            box_height: {
+              type: 'number',
+              description: 'Paragraph text box height in pixels (implies kind=paragraph)',
+              minimum: 1,
+            },
+            alignment: {
+              type: 'string',
+              enum: [
+                'LEFT',
+                'CENTER',
+                'RIGHT',
+                'LEFTJUSTIFIED',
+                'CENTERJUSTIFIED',
+                'RIGHTJUSTIFIED',
+                'FULLYJUSTIFIED',
+              ],
+              description: 'Paragraph/point justification',
+            },
+            red: { type: 'number', description: 'Text color red 0–255', minimum: 0, maximum: 255 },
+            green: { type: 'number', description: 'Text color green 0–255', minimum: 0, maximum: 255 },
+            blue: { type: 'number', description: 'Text color blue 0–255', minimum: 0, maximum: 255 },
           },
           required: ['text'],
         },
@@ -119,7 +167,7 @@ export function createLayerTools(connection: PhotoshopConnection): ToolDefinitio
           'List all layers in the active document with kind, visibility, and opacity.\n\n' +
           'Use when: choosing a layer to edit, debugging structure, or after organize_layers.\n' +
           'Do NOT use when: only session summary is needed — use photoshop_get_state (lighter).\n\n' +
-          'Returns: layerCount, layers array, context.\n' +
+          'Returns: layerCount, layers array (LayerSets include is_artboard), context.\n' +
           'Preconditions: active document. Side effects: none.',
         inputSchema: {
           type: 'object',
@@ -222,36 +270,36 @@ async function createTextLayer(
   args: Record<string, unknown>
 ): Promise<ToolResult> {
   const text = args.text as string;
-  const x = (args.x as number) || 100;
-  const y = (args.y as number) || 100;
-  const fontSize = (args.fontSize as number) || 24;
-  const fontName = args.fontName as string | undefined;
+  if (typeof text !== 'string' || text.length === 0) {
+    return atomicFailure({
+      ok: false,
+      code: 'invalid_arguments',
+      message: 'text is required',
+    });
+  }
+  const x = typeof args.x === 'number' && Number.isFinite(args.x) ? args.x : 100;
+  const y = typeof args.y === 'number' && Number.isFinite(args.y) ? args.y : 100;
+  const fontSize = typeof args.fontSize === 'number' && Number.isFinite(args.fontSize) ? args.fontSize : 24;
+  const fontName = typeof args.fontName === 'string' && args.fontName.trim() ? args.fontName.trim() : undefined;
+  const parsed = parseTextStyleArgs(args, { requireSome: false });
+  if (parsed.error) return atomicFailure(parsed.error);
 
   try {
     const apiFactory = new PhotoshopAPIFactory(connection);
     const api = await apiFactory.createAPI();
 
-    const script = ExtendScriptSnippets.createTextLayer(text, x, y, fontSize, fontName);
-    await api.executeScript(script);
-
-    return {
-      content: [
-        {
-          type: 'text' as const,
-          text: `Text layer created: "${text}" at (${x}, ${y})${fontName ? ` with font ${fontName}` : ''}`,
-        },
-      ],
-    };
+    const styleLiteral = hasTextStyle(parsed.style) ? emitTextStyleLiteral(parsed.style) : '{}';
+    const raw = await api.executeScript(
+      ExtendScriptSnippets.createTextLayer(text, x, y, fontSize, fontName, styleLiteral)
+    );
+    const details = parseSnippetResult(raw) ?? { text, position: { x, y }, fontSize, font: fontName };
+    return atomicSuccess(
+      `Text layer created: "${text}" at (${x}, ${y})${fontName ? ` with font ${fontName}` : ''}`,
+      details,
+      'photoshop_get_preview'
+    );
   } catch (error) {
-    return {
-      content: [
-        {
-          type: 'text' as const,
-          text: `Error creating text layer: ${error instanceof Error ? error.message : String(error)}`,
-        },
-      ],
-      isError: true,
-    };
+    return atomicFailureFromError(error);
   }
 }
 

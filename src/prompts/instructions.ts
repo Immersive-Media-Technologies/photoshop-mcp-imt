@@ -27,9 +27,13 @@ State before action
 - Capture \`document.id\` from \`photoshop_get_state\` (or \`photoshop_list_documents\`)
   and pass it as optional \`document_id\` on mutating tools. Photoshop's active tab
   can change outside this integration; \`document_id\` pins the edit to that file.
+- When \`openDocumentCount\` > 1, call \`photoshop_list_documents\` and pin
+  \`document_id\` on preview/save/close. Do not assume the front tab is the
+  file the user meant.
 - For visual confirmation after meaningful edits, call
   \`photoshop_get_preview\` (cheap, side-effect free JPEG snapshot). Use it
-  sparingly — once per major step, not per atomic tool.
+  sparingly — once per major step, not per atomic tool. Pass \`document_id\`
+  to snapshot a background tab.
 
 Recipe tools over atomic chains
 - When the user's request matches a recipe purpose ("remove background",
@@ -69,9 +73,26 @@ Error recovery contract
   - \`no_active_layer\` / \`layer_not_found\` — list layers with
     \`photoshop_get_layers\`, then act on a specific name.
   - \`selection_required\` — make a selection before reusing the failed tool.
-  - \`version_unsupported\` / \`generative_unavailable\` — degrade gracefully
-    to a non-generative alternative; tell the user once which feature is
-    missing.
+  - \`extendscript_timeout\` — the JSX ran past its budget (default 30s).
+    MCP abort does **not** stop Photoshop; the previous script may still be
+    running. \`photoshop_ping\` runs a short script on that same queue and
+    succeeds only when Photoshop finishes it. Retry ping until it succeeds,
+    then call \`photoshop_get_state\`. Do not call \`photoshop_get_state\` or
+    \`photoshop_get_layers\` while ping is still returning
+    \`extendscript_timeout\`. If the timed-out tool was
+    \`photoshop_execute_script\`, retry **once** with \`timeout_ms\` (e.g. 180000,
+    max 600000) or use a batch recipe (those already use 600s). Set env
+    \`PHOTOSHOP_SCRIPT_TIMEOUT\` to raise the default.
+  - \`scratch_disk_full\` — Photoshop is out of scratch space. It may show
+    "Could not initialize Photoshop because the scratch disks are full",
+    "Could not complete your request because the scratch disks are full", or
+    "Scratch Disk Low", and then freeze so a script times out. Free at least
+    100 GB on the primary scratch disk (the OS drive by default), then restart
+    Photoshop. Ping and \`get_state\` wait until that restart.
+  - \`artboard_not_found\` — call \`photoshop_list_artboards\` or
+    \`photoshop_create_artboard\`.
+  - \`font_not_found\` — call \`photoshop_list_fonts\` and retry with a listed name.
+  - \`not_text_layer\` — select or create a text layer (\`photoshop_create_text_layer\`).
 
 Multi-step etiquette
 - After every tool result, decide: continue with the next planned tool, or
@@ -118,6 +139,21 @@ User intent glossary
 - batch.csv_cards — "csv to cards", "batch cards", "data-driven graphics",
   "mail merge for images", "name badges from spreadsheet", "sertifika bas"
   → \`photoshop_recipe_csv_to_cards\`; prompt \`ps.csv_to_cards\`
+- artboard.multi — "artboard", "artboards", "iPhone and iPad frames",
+  "device layouts", "画板" → \`photoshop_list_artboards\` then
+  \`photoshop_create_artboard\` / \`photoshop_set_active_artboard\` /
+  \`photoshop_export_artboards\` (or \`photoshop_export_as\` with \`artboard_id\`)
+- docs.multi — "multi-screen", "multiple files", "all open tabs", "这几个文档",
+  "close these documents" → \`photoshop_list_documents\` (artboard_count + saved
+  per tab), then \`document_id\` on \`photoshop_get_preview\` / save / close.
+  Not a second Photoshop process.
+- type.set — "tracking", "leading", "letter spacing", "line height", "text box",
+  "paragraph text", "字间距", "行高", "排版", "文本框" → pass those fields on
+  \`photoshop_create_text_layer\` or \`photoshop_set_text_style\`. Do not use
+  \`photoshop_execute_script\` for tracking/leading/box.
+- type.mixed — "mixed fonts", "two colors in one line", "混排", "同一文字层" →
+  \`photoshop_set_text_ranges\` (from inclusive, to exclusive). Do not split into
+  extra layers unless that tool errors.
 
 Degrade paths
 - Generative remove / distraction — prefer \`photoshop_generative_remove\`; degrade to
