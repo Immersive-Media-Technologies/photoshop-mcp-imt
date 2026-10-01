@@ -196,6 +196,8 @@ Each version is described on the
 [**Releases**](https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt/releases) page —
 what the server does at that version and what the release added:
 
+- [v0.4.4](https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt/releases/tag/v0.4.4) · 2026-10-01 —
+  fix: the ChatGPT gateway command under `npx -p`.
 - [v0.4.3](https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt/releases/tag/v0.4.3) · 2026-10-01 —
   ChatGPT in one command (gateway + tunnel), client icons in Install.
 - [v0.4.2](https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt/releases/tag/v0.4.2) · 2026-10-01 —

@@ -1,7 +1,7 @@
 {
   "name": "@immersive-media-technologies/photoshop-mcp-imt",
-  "version": "0.4.3",
-  "description": "PS-MCP-IMT — MCP server for Adobe Photoshop built for autonomous AI agents (macOS + Windows): 134 tools behind a 9-tool facade, a UXP bridge that keeps working when Photoshop is modal, headless corner-pin/perspective, honest busy/timeout errors, no telemetry. By Immersive Media Technologies (fork of alisaitteke/photoshop-mcp).",
+  "version": "0.4.4",
+  "description": "PS-MCP-IMT \u2014 MCP server for Adobe Photoshop built for autonomous AI agents (macOS + Windows): 134 tools behind a 9-tool facade, a UXP bridge that keeps working when Photoshop is modal, headless corner-pin/perspective, honest busy/timeout errors, no telemetry. By Immersive Media Technologies (fork of alisaitteke/photoshop-mcp).",
   "keywords": [
     "adobe",
     "photoshop",
