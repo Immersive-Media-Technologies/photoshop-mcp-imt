@@ -320,7 +320,7 @@ export function buildFacadeTools(
         if (!(await uxpAvailable()))
           return text(
             'UXP bridge is not connected: the Deep Artisan Bridge plugin is not running inside Photoshop. ' +
-              'Ask the user to open Plugins → Deep Artisan Bridge in Photoshop (the panel must be opened once per Photoshop launch), or to install the plugin (stack/ps-mcp/README-DEEPARTISAN.md, section «UXP-мост»).',
+              'Ask the user to open Plugins → Deep Artisan Bridge in Photoshop (the panel must be opened once per Photoshop launch), or to install the plugin (README, section «The UXP bridge»).',
             true,
           );
         const act = String(args.action ?? '');
