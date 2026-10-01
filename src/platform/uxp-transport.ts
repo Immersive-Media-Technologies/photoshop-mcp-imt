@@ -16,13 +16,14 @@
  * UXP отвечает за секунду по localhost; без плагина PREFER ничего не меняет.
  */
 import { invokeUxpBridge } from './uxp-bridge-server.js';
+import { envFlag } from '../utils/env-flag.js';
 import { isUxpBridgeReachable } from './uxp-bridge-client.js';
 
 export type UxpMode = 'off' | 'fallback' | 'prefer';
 
 export function uxpMode(env: NodeJS.ProcessEnv = process.env): UxpMode {
-  if (env.PS_MCP_UXP !== '1') return 'off';
-  return env.PS_MCP_UXP_PREFER === '1' ? 'prefer' : 'fallback';
+  if (!envFlag('PS_MCP_UXP', false, env)) return 'off';
+  return envFlag('PS_MCP_UXP_PREFER', false, env) ? 'prefer' : 'fallback';
 }
 
 /** Ошибка основного пути, после которой имеет смысл пробовать UXP. Чистая. */

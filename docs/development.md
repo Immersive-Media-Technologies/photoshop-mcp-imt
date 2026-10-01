@@ -16,7 +16,8 @@ npm run build
 ### Build
 
 ```bash
-npm run build
+npm run build        # server + UXP plugin (.ccx)
+npm run build:mcpb   # Claude Desktop extension → release/photoshop-mcp-imt-<version>.mcpb
 ```
 
 ### Watch Mode

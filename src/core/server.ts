@@ -50,6 +50,7 @@ import { ensureUxpBridgeServer } from '../platform/uxp-bridge-server.js';
 // Deep Artisan (17.09): фасад ps_catalog/ps_do поверх реестра (PS_MCP_FACADE=1)
 import { buildFacadeTools, facadeEnabled, FACADE_TOOL_NAMES } from '../da/facade.js';
 import { probePhotoshopEngine } from './ping-engine.js';
+import { envFlag } from '../utils/env-flag.js';
 
 export interface PhotoshopMCPServerOptions {
   serverVersion: string;
@@ -137,7 +138,7 @@ export class PhotoshopMCPServer {
 
     // Deep Artisan: HTTP-мост UXP (Neural Filters) слушает порт — только по
     // явному PS_MCP_UXP=1, иначе сервер не открывает ничего сетевого
-    if (process.env.PS_MCP_UXP === '1') {
+    if (envFlag('PS_MCP_UXP')) {
       void ensureUxpBridgeServer().catch((err) => {
         this.logger.debug('UXP bridge server not started:', err);
       });

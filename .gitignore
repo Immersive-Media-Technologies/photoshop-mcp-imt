@@ -87,3 +87,7 @@ scripts/output/*.json
 # Deep Artisan fork: lockfile tracked — npm ci must be reproducible on reinstall
 !package-lock.json
 .ship/
+
+# MCPB bundle build
+release/
+.mcpb-staging/

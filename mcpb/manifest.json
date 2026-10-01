@@ -1,0 +1,84 @@
+{
+  "$schema": "https://raw.githubusercontent.com/modelcontextprotocol/mcpb/main/schemas/mcpb-manifest-v0.4.schema.json",
+  "manifest_version": "0.4",
+  "name": "photoshop-mcp-imt",
+  "display_name": "PS-MCP-IMT — Photoshop for AI agents",
+  "version": "0.0.0",
+  "description": "Drive a running Adobe Photoshop from Claude: documents, layers, text, masks, filters, generative tools, export.",
+  "long_description": "PS-MCP-IMT by Immersive Media Technologies. 134 Photoshop operations behind a 9-tool facade, a UXP bridge that keeps answering while Photoshop shows a dialog, headless corner-pin, honest errors, no telemetry. Requires Adobe Photoshop 2024+ running on this computer. Non-commercial license; unofficial, not affiliated with Adobe Inc.",
+  "author": {
+    "name": "Immersive Media Technologies",
+    "url": "https://github.com/Immersive-Media-Technologies"
+  },
+  "homepage": "https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt"
+  },
+  "documentation": "https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt#readme",
+  "support": "https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt/issues",
+  "license": "SEE LICENSE IN LICENSE",
+  "icon": "icon.png",
+  "keywords": ["mcp", "photoshop", "adobe", "image-editing", "ai-agents"],
+  "server": {
+    "type": "node",
+    "entry_point": "server/dist/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/server/dist/index.js"],
+      "env": {
+        "PS_MCP_FACADE": "${user_config.facade}",
+        "PS_MCP_UXP": "${user_config.uxpBridge}",
+        "PS_MCP_UXP_PREFER": "${user_config.uxpPrefer}",
+        "PHOTOSHOP_PATH": "${user_config.photoshopPath}",
+        "LOG_LEVEL": "${user_config.logLevel}"
+      }
+    }
+  },
+  "user_config": {
+    "facade": {
+      "type": "boolean",
+      "title": "Compact tool surface (9 tools)",
+      "description": "On: the model sees ps_catalog / ps_do and 7 helpers (~900 tokens) and reaches every operation through ps_do. Off: all 134 photoshop_* tools are listed directly.",
+      "default": true,
+      "required": false
+    },
+    "uxpBridge": {
+      "type": "boolean",
+      "title": "UXP bridge (second transport)",
+      "description": "Start the local bridge for the Deep Artisan Bridge panel plugin (127.0.0.1:38452, shared-secret token). Needs the plugin installed in Photoshop — see the README.",
+      "default": true,
+      "required": false
+    },
+    "uxpPrefer": {
+      "type": "boolean",
+      "title": "Prefer UXP for reads, save and export",
+      "description": "Try the UXP plugin first for state / layers / save / export, ExtendScript second. Off: ExtendScript first, UXP only when Photoshop is modal.",
+      "default": false,
+      "required": false
+    },
+    "photoshopPath": {
+      "type": "string",
+      "title": "Photoshop install path",
+      "description": "Optional. Leave empty to auto-detect Photoshop in /Applications or Program Files.",
+      "required": false,
+      "default": ""
+    },
+    "logLevel": {
+      "type": "string",
+      "title": "Log level",
+      "description": "0 debug · 1 info · 2 warn · 3 error (stderr)",
+      "default": "1",
+      "required": false
+    }
+  },
+  "compatibility": {
+    "claude_desktop": ">=1.0.0",
+    "platforms": ["darwin", "win32"],
+    "runtimes": {
+      "node": ">=18.0.0"
+    }
+  },
+  "tools_generated": true,
+  "prompts_generated": true
+}
