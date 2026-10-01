@@ -54,6 +54,8 @@ class ToolTestRunner {
   private results: ToolRunResult[] = [];
   private layerName = 'MCP_Paint';
   private textLayerName = 'MCP_Text';
+  /** Text of the last tool result (localized Photoshop names duplicates «… копия», not «… copy»). */
+  lastBody = '';
 
   constructor(private client: Client) {}
 
@@ -73,6 +75,7 @@ class ToolTestRunner {
       const result = await this.client.callTool({ name, arguments: args });
       const ms = Date.now() - started;
       const body = textFrom(result);
+      this.lastBody = body;
 
       if (opts.expectError) {
         if (result.isError) {
@@ -247,6 +250,7 @@ async function main(): Promise<void> {
   await t.run('photoshop_set_layer_visibility', { visible: true });
   await t.run('photoshop_rename_layer', { name: 'MCP_Paint_Renamed' });
   await t.run('photoshop_duplicate_layer');
+  const dupName = /"newName":"([^"]+)"/.exec(t.lastBody)?.[1] ?? 'MCP_Paint_Renamed copy';
   await t.run('photoshop_set_layer_locked', { locked: false });
   await t.run('photoshop_execute_script', {
     code: `app.activeDocument.activeLayer = app.activeDocument.artLayers.getByName("MCP_Paint_Renamed"); return { active: app.activeDocument.activeLayer.name };`,
@@ -726,7 +730,7 @@ async function main(): Promise<void> {
   await t.run('photoshop_set_active_document', { index: 0 }, { required: true });
 
   console.log('\n=== Phase 7: Adjustments ===');
-  await t.run('photoshop_select_layer_by_name', { name: 'MCP_Paint_Renamed copy' });
+  await t.run('photoshop_select_layer_by_name', { name: dupName });
   await t.run('photoshop_execute_script', {
     code: `var L=app.activeDocument.activeLayer; L.blendMode=BlendMode.NORMAL; return { selected: L.name, blendMode: String(L.blendMode) };`,
   });
@@ -735,18 +739,18 @@ async function main(): Promise<void> {
   await t.run('photoshop_auto_levels');
   await t.run('photoshop_auto_contrast');
   await t.run('photoshop_adjust_curves', { preset: 'auto_tone' });
-  await t.run('photoshop_select_layer_by_name', { name: 'MCP_Paint_Renamed copy' });
+  await t.run('photoshop_select_layer_by_name', { name: dupName });
   await t.run('photoshop_desaturate');
   await t.run('photoshop_invert');
 
   console.log('\n--- Phase 7b: Filters (high pass, smart blur) ---');
-  await t.run('photoshop_select_layer_by_name', { name: 'MCP_Paint_Renamed copy' });
+  await t.run('photoshop_select_layer_by_name', { name: dupName });
   await t.run('photoshop_apply_high_pass', { radius: 5 });
   await t.run('photoshop_apply_smart_blur', { radius: 10, threshold: 25 });
   await t.run('photoshop_apply_high_pass', { radius: 0 }, { expectError: true });
 
   console.log('\n=== Phase 8: Filters ===');
-  await t.run('photoshop_select_layer_by_name', { name: 'MCP_Paint_Renamed copy' });
+  await t.run('photoshop_select_layer_by_name', { name: dupName });
   await t.run('photoshop_apply_gaussian_blur', { radius: 1.5 });
   await t.run('photoshop_apply_sharpen', { amount: 50, radius: 1, threshold: 0 });
   await t.run('photoshop_apply_noise', { amount: 2, distribution: 'UNIFORM', monochromatic: true });
