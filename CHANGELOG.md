@@ -20,7 +20,8 @@ photoshop-mcp-imt-chatgpt` (`tools/chatgpt-gateway.mjs`, also `npm run chatgpt` 
 
 ### Changed
 
-- README Install table: client icons, a smaller «Add to Cursor» button.
+- README Install table: client icons, a smaller «Add to Cursor» button, a Google Antigravity row
+  (`~/.gemini/config/mcp_config.json`); `install.sh` / `install.ps1` also write Antigravity's config.
 
 ## [0.4.2] - 2026-10-01
 
