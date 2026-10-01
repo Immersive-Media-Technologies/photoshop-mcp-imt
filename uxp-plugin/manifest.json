@@ -1,0 +1,39 @@
+{
+  "id": "com.deepartisan.ps-bridge",
+  "name": "Deep Artisan Bridge",
+  "version": "1.1.0",
+  "manifestVersion": 5,
+  "main": "index.html",
+  "host": {
+    "app": "PS",
+    "minVersion": "24.0.0"
+  },
+  "requiredPermissions": {
+    "network": {
+      "domains": "all"
+    },
+    "localFileSystem": "fullAccess",
+    "allowCodeGenerationFromStrings": true
+  },
+  "entrypoints": [
+    {
+      "type": "panel",
+      "id": "bridgePanel",
+      "label": {
+        "default": "Deep Artisan Bridge"
+      },
+      "minimumSize": {
+        "width": 240,
+        "height": 120
+      },
+      "maximumSize": {
+        "width": 400,
+        "height": 200
+      },
+      "preferredDockedSize": {
+        "width": 280,
+        "height": 140
+      }
+    }
+  ]
+}
