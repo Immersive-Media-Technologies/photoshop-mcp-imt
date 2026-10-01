@@ -2,7 +2,7 @@
 
 # PS-MCP-IMT — Photoshop for AI agents, with two ways in
 
-An MCP server that lets an AI agent (Claude Desktop, Cursor, Claude Code or any MCP-compatible
+An MCP server that lets an AI agent (Claude Desktop, Cursor, ChatGPT or any MCP-compatible
 client) drive a running Adobe Photoshop: documents, layers, text, masks, selections, filters,
 adjustments, Smart Objects, artboards, generative tools, export — from natural language.
 
@@ -30,17 +30,17 @@ until a timeout; and the agent drowns in a hundred tool definitions. This fork k
 transport inside Photoshop (UXP)** for exactly those moments, shows the agent **9 tools** instead of
 134, and tells it the truth when something cannot be done.
 
-|                         | **PS-MCP-IMT (this repo)**                                                                                                                                                                              | alisaitteke/photoshop-mcp                                                                    | mikechambers/adb-mcp                                                    | dcc-mcp/dcc-mcp-photoshop                                |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | -------------------------------------------------------- |
-| Talks to Photoshop via  | **ExtendScript (osascript / COM) _and_ a UXP panel plugin** — chosen per call, UXP as fallback or first (`PS_MCP_UXP_PREFER=1`)                                                                         | ExtendScript via AppleScript / COM (we are a fork)                                           | UXP plugin → separate WebSocket proxy (Python) → MCP server             | UXP plugin → Rust broker (`adobepy`) → Python MCP server |
-| When Photoshop is modal | **`photoshop_busy` in 4 s** with an instruction for the user, 8 s hold; reads / save / export **continue through UXP** (`via: uxp`)                                                                     | 30 s timeout → `extendscript_timeout`, retry ping                                            | —                                                                       | UXP only, so unaffected — but no ExtendScript DOM at all |
-| Tool surface            | **134 tools registered, 9 visible** (`ps_catalog` / `ps_do` / `ps_batch` …) — ~900 tokens of definitions per turn instead of ~25 K; every tool reachable through `ps_do`                                | 118–122 tools, all visible (`photoshop_*` + 16 recipes)                                      | «a subset of functionality» per app, low-level tools (proof of concept) | 40+ typed tools in 8 skill packages                      |
-| Headless corner-pin     | **`photoshop_distort_layer`**: four corners → custom warp solved for the homography; verified that `Trnf` + `quadrilateral` is silently ignored in Photoshop 2026 (12 combinations probed)              | —                                                                                            | —                                                                       | —                                                        |
-| Telemetry               | **none** — analytics module is a no-op, feedback nudge removed, server sends nothing                                                                                                                    | anonymous analytics **on by default** (opt-out), product-feedback nudge via `photoshop_ping` | —                                                                       | —                                                        |
-| Undo                    | recipes = one history state (upstream); `photoshop_busy` / `command_unavailable` / `extendscript_timeout` / `scratch_disk_full` tell the agent _why_ instead of a generic timeout                       | recipes = one history state; `extendscript_timeout`, `scratch_disk_full`                     | —                                                                       | staged install with `--dry-run` / receipts               |
-| Install                 | `npm install && npm run build` → `node dist/index.js`; UXP plugin as `.ccx`, UXP Developer Tools or a manual layout — every path documented with its failure modes                                      | `npx -y @alisaitteke/photoshop-mcp`; UXP plugin for Neural Filters only                      | Python 3 + Node + UXP Developer Tools + proxy process                   | `pip install` or binaries; Rust broker                   |
-| Verified on             | **Photoshop 2026 (27.9–27.10), macOS, UXP 9.4.1, Russian and English UI** — live sweep of every tool: 193 pass / 0 fail / 11 environment skips (2026-10-01); Windows transport inherited, not run by us | Windows + macOS                                                                              | Photoshop 26+, macOS + Windows                                          | Windows, Linux, macOS                                    |
-| License                 | **IMT Non-Commercial** for our work (attribution + link required, free for non-commercial use); upstream code stays MIT                                                                                 | MIT                                                                                          | MIT                                                                     | MIT                                                      |
+|                         | **PS-MCP-IMT (this repo)**                                                                                                                                                                                                                                                                                              | alisaitteke/photoshop-mcp                                                                    | mikechambers/adb-mcp                                                    | dcc-mcp/dcc-mcp-photoshop                                |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | -------------------------------------------------------- |
+| Talks to Photoshop via  | **ExtendScript (osascript / COM) _and_ a UXP panel plugin** — chosen per call, UXP as fallback or first (`PS_MCP_UXP_PREFER=1`)                                                                                                                                                                                         | ExtendScript via AppleScript / COM (we are a fork)                                           | UXP plugin → separate WebSocket proxy (Python) → MCP server             | UXP plugin → Rust broker (`adobepy`) → Python MCP server |
+| When Photoshop is modal | **`photoshop_busy` in 4 s** with an instruction for the user, 8 s hold; reads / save / export **continue through UXP** (`via: uxp`)                                                                                                                                                                                     | 30 s timeout → `extendscript_timeout`, retry ping                                            | —                                                                       | UXP only, so unaffected — but no ExtendScript DOM at all |
+| Tool surface            | **134 tools registered, 9 visible** (`ps_catalog` / `ps_do` / `ps_batch` …) — ~900 tokens of definitions per turn instead of ~25 K; every tool reachable through `ps_do`                                                                                                                                                | 118–122 tools, all visible (`photoshop_*` + 16 recipes)                                      | «a subset of functionality» per app, low-level tools (proof of concept) | 40+ typed tools in 8 skill packages                      |
+| Headless corner-pin     | **`photoshop_distort_layer`**: four corners → custom warp solved for the homography; verified that `Trnf` + `quadrilateral` is silently ignored in Photoshop 2026 (12 combinations probed)                                                                                                                              | —                                                                                            | —                                                                       | —                                                        |
+| Telemetry               | **none** — analytics module is a no-op, feedback nudge removed, server sends nothing                                                                                                                                                                                                                                    | anonymous analytics **on by default** (opt-out), product-feedback nudge via `photoshop_ping` | —                                                                       | —                                                        |
+| Undo                    | recipes = one history state (upstream); `photoshop_busy` / `command_unavailable` / `extendscript_timeout` / `scratch_disk_full` tell the agent _why_ instead of a generic timeout                                                                                                                                       | recipes = one history state; `extendscript_timeout`, `scratch_disk_full`                     | —                                                                       | staged install with `--dry-run` / receipts               |
+| Install                 | **one click**: `.mcpb` for Claude Desktop (no Node needed), «Add to Cursor» button, `npx` for Claude Code and any client; `install.sh` / `install.ps1` with a live self-test that write the client configs; UXP plugin as `.ccx`, UXP Developer Tools or a manual layout — every path documented with its failure modes | `npx -y @alisaitteke/photoshop-mcp`; UXP plugin for Neural Filters only                      | Python 3 + Node + UXP Developer Tools + proxy process                   | `pip install` or binaries; Rust broker                   |
+| Verified on             | **Photoshop 2026 (27.9–27.10), macOS, UXP 9.4.1, Russian and English UI** — live sweep of every tool: 193 pass / 0 fail / 11 environment skips (2026-10-01); Windows transport inherited, not run by us                                                                                                                 | Windows + macOS                                                                              | Photoshop 26+, macOS + Windows                                          | Windows, Linux, macOS                                    |
+| License                 | **IMT Non-Commercial** for our work (attribution + link required, free for non-commercial use); upstream code stays MIT                                                                                                                                                                                                 | MIT                                                                                          | MIT                                                                     | MIT                                                      |
 
 Facts about other projects are from their READMEs and repository metadata on GitHub on 2026-10-01
 (adb-mcp: 716 stars, last push 2026-07-08, «proof of concept»; dcc-mcp-photoshop: v0.2.0;
@@ -62,47 +62,56 @@ The agent combines the operations itself through `ps_do`, checking `ps_get_state
 
 ## Install
 
-Requirements: Adobe Photoshop 2024+ (2026 verified), Node.js 18+ (we run 26), and on macOS the
-permission to control Photoshop through Automation (System Settings → Privacy & Security →
-Automation — the first call asks; TCC error −1743 means it was denied).
+Requirements: Adobe Photoshop 2024+ running on this computer (2026 verified). On macOS the first
+call asks for permission to control Photoshop through Automation (System Settings → Privacy &
+Security → Automation; AppleScript error −1743 means it was denied). Pick the route for your client:
 
-```bash
-git clone https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt.git
-cd photoshop-mcp-imt
-npm install
-npm run build          # server (tsc) + the UXP plugin package dist/uxp/deepartisan-ps-bridge.ccx
-```
-
-Client configuration (Claude Desktop `claude_desktop_config.json`, Cursor `mcp.json`, or
-`claude mcp add photoshop -e PS_MCP_FACADE=1 -e PS_MCP_UXP=1 -- node /ABSOLUTE/PATH/dist/index.js`):
+| Client                                                      | Route                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | What you need                                       |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| **Claude Desktop**                                          | download [`photoshop-mcp-imt.mcpb`](https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt/releases/latest/download/photoshop-mcp-imt.mcpb), double-click it, click **Install** — the settings dialog has the switches (compact tool surface, UXP bridge)                                                                                                                                                                                                   | nothing else: Claude Desktop brings its own Node.js |
+| **Cursor**                                                  | [![Add photoshop MCP server to Cursor](https://cursor.com/deeplink/mcp-install-dark.png)](https://cursor.com/en/install-mcp?name=photoshop&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsIkBpbW1lcnNpdmUtbWVkaWEtdGVjaG5vbG9naWVzL3Bob3Rvc2hvcC1tY3AtaW10Il0sImVudiI6eyJQU19NQ1BfRkFDQURFIjoiMSIsIlBTX01DUF9VWFAiOiIxIn19) — one click, Cursor writes the config                                                                                                      | Node.js 18+ (`npx` fetches the package)             |
+| **Claude Code**                                             | `claude mcp add photoshop -e PS_MCP_FACADE=1 -e PS_MCP_UXP=1 -- npx -y @immersive-media-technologies/photoshop-mcp-imt`                                                                                                                                                                                                                                                                                                                                                | Node.js 18+                                         |
+| **ChatGPT** and other clients that take only remote servers | run the server behind a stdio→HTTP gateway on the Photoshop machine — `npx -y supergateway --stdio "npx -y @immersive-media-technologies/photoshop-mcp-imt" --outputTransport streamableHttp --port 8000` — expose `http://localhost:8000/mcp` through a tunnel (ngrok, Cloudflare Tunnel) and add that URL as a connector (ChatGPT → Settings → Connectors, developer mode). Photoshop stays on your machine; the tunnel is your door, keep it closed when not in use | Node.js 18+, a tunnel                               |
+| **Any MCP client** with a JSON config                       | the snippet below in its `mcpServers`                                                                                                                                                                                                                                                                                                                                                                                                                                  | Node.js 18+                                         |
 
 ```json
 {
   "mcpServers": {
     "photoshop": {
-      "command": "node",
-      "args": ["/ABSOLUTE/PATH/TO/photoshop-mcp-imt/dist/index.js"],
+      "command": "npx",
+      "args": ["-y", "@immersive-media-technologies/photoshop-mcp-imt"],
       "env": { "PS_MCP_FACADE": "1", "PS_MCP_UXP": "1" }
     }
   }
 }
 ```
 
-**Windows.** Same steps; the server talks to Photoshop through COM (`cscript` + a VBScript
-shim, results decoded as UTF-16). Set `PHOTOSHOP_PATH` when Photoshop is not in the default
-`C:\Program Files\Adobe\…` location. Not run by us — see «Verified on» above.
+**From source, with a live self-test** (the route we run ourselves): clone, then `./install.sh` on
+macOS or `.\install.ps1` on Windows. The script checks Photoshop and Node, builds the server and the
+UXP plugin, pings the running Photoshop through the real transport, and — after asking — writes
+the entry into Claude Desktop's and Cursor's config files (backing them up first). `--no-config`
+only prints the snippet; `--yes` skips the questions. The Windows script is not run by us yet.
 
-| Variable                    | Default                                 | Meaning                                                                                          |
-| --------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `PS_MCP_FACADE`             | off                                     | `1` → the client sees the 9 `ps_*` tools only; everything else through `ps_do`                   |
-| `PS_MCP_UXP`                | off                                     | `1` → start the bridge server for the UXP plugin (`127.0.0.1:38452`) and register `ps_uxp`       |
-| `PS_MCP_UXP_PREFER`         | off                                     | `1` → UXP first for state / layers / save / export, ExtendScript second                          |
-| `PS_MCP_UXP_TOKEN_FILE`     | `~/.deepartisan/state/uxp-bridge.token` | shared secret the plugin must send (`X-DA-Bridge-Token`); created 0600 on first start            |
-| `PHOTOSHOP_UXP_BRIDGE_PORT` | `38452`                                 | bridge port                                                                                      |
-| `PS_MCP_READ_TIMEOUT_MS`    | `8000`                                  | ExtendScript timeout for read-only tools (fast fallback to UXP when Photoshop is modal)          |
-| `PHOTOSHOP_SCRIPT_TIMEOUT`  | `30000`                                 | ExtendScript timeout for everything else; `timeout_ms` on `ps_execute_script` overrides per call |
-| `PHOTOSHOP_PATH`            | auto-detect                             | path to the Photoshop app / executable                                                           |
-| `LOG_LEVEL`                 | `1`                                     | 0 debug · 1 info · 2 warn · 3 error (stderr)                                                     |
+```bash
+git clone https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt.git
+cd photoshop-mcp-imt && ./install.sh
+```
+
+**Windows.** The server talks to Photoshop through COM (`cscript` + a VBScript shim, results
+decoded as UTF-16). Set `PHOTOSHOP_PATH` when Photoshop is not under `C:\Program Files\Adobe`.
+Inherited from upstream, not run by us — see «Verified on» above.
+
+| Variable                    | Default                                 | Meaning                                                                                             |
+| --------------------------- | --------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `PS_MCP_FACADE`             | off                                     | `1` / `true` → the client sees the 9 `ps_*` tools only; everything else through `ps_do`             |
+| `PS_MCP_UXP`                | off                                     | `1` / `true` → start the bridge server for the UXP plugin (`127.0.0.1:38452`) and register `ps_uxp` |
+| `PS_MCP_UXP_PREFER`         | off                                     | `1` / `true` → UXP first for state / layers / save / export, ExtendScript second                    |
+| `PS_MCP_UXP_TOKEN_FILE`     | `~/.deepartisan/state/uxp-bridge.token` | shared secret the plugin must send (`X-DA-Bridge-Token`); created 0600 on first start               |
+| `PHOTOSHOP_UXP_BRIDGE_PORT` | `38452`                                 | bridge port                                                                                         |
+| `PS_MCP_READ_TIMEOUT_MS`    | `8000`                                  | ExtendScript timeout for read-only tools (fast fallback to UXP when Photoshop is modal)             |
+| `PHOTOSHOP_SCRIPT_TIMEOUT`  | `30000`                                 | ExtendScript timeout for everything else; `timeout_ms` on `ps_execute_script` overrides per call    |
+| `PHOTOSHOP_PATH`            | auto-detect                             | path to the Photoshop app / executable                                                              |
+| `LOG_LEVEL`                 | `1`                                     | 0 debug · 1 info · 2 warn · 3 error (stderr)                                                        |
 
 ### The UXP bridge (second transport)
 
@@ -185,6 +194,9 @@ Each version is described on the
 [**Releases**](https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt/releases) page —
 what the server does at that version and what the release added:
 
+- [v0.4.2](https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt/releases/tag/v0.4.2) · 2026-10-01 —
+  one-click installs: Claude Desktop extension (`.mcpb`), «Add to Cursor», npm package, `install.sh` /
+  `install.ps1` that write the client configs.
 - [v0.4.1](https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt/releases/tag/v0.4.1) · 2026-10-01 —
   first public release of the IMT fork: the full server (134 tools) on upstream 1.7.27, plus the UXP
   bridge, the facade, headless corner-pin and the modal-Photoshop error model.

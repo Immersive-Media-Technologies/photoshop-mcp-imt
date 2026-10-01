@@ -13,6 +13,7 @@
 // Все настоящие тулы остаются зарегистрированными — ps_do зовёт их через
 // реестр, так что поведение и ошибки апстрима не меняются.
 import { mkdirSync } from 'node:fs';
+import { envFlag } from '../utils/env-flag.js';
 import { dirname } from 'node:path';
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import type { ToolDefinition, ToolRegistry, ToolResult } from '../core/tool-registry.js';
@@ -21,7 +22,7 @@ import { isTransportFailure, uxp, uxpAvailable, uxpMode } from '../platform/uxp-
 export const FACADE_PREFIX = 'photoshop_';
 
 export function facadeEnabled(): boolean {
-  return process.env.PS_MCP_FACADE === '1';
+  return envFlag('PS_MCP_FACADE');
 }
 
 function opName(toolName: string): string {

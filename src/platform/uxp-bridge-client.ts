@@ -2,13 +2,14 @@
  * Client for the MCP-hosted UXP bridge (health check + neural filter invoke).
  */
 import { ensureUxpBridgeServer, invokeUxpBridge, uxpPluginSeen } from './uxp-bridge-server.js';
+import { envFlag } from '../utils/env-flag.js';
 
 const HEALTH_TIMEOUT_MS = 800;
 
 export async function isUxpBridgeReachable(): Promise<boolean> {
   // Deep Artisan 29.09: сервер не поднимается без PS_MCP_UXP=1 (ничего сетевого);
   // «достижим» = плагин в Photoshop опрашивает нас (uxpPluginSeen), а не «порт открыт»
-  if (process.env.PS_MCP_UXP !== '1') return false;
+  if (!envFlag('PS_MCP_UXP')) return false;
   try {
     const port = await ensureUxpBridgeServer();
     // плагин опрашивает раз в 400 мс — сразу после старта сервера ждём первый опрос (до 1.5 с)

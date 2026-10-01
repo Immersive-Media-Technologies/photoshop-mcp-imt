@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Versions 1.x below are the upstream history of
 [alisaitteke/photoshop-mcp](https://github.com/alisaitteke/photoshop-mcp), kept as received.
 
+## [0.4.2] - 2026-10-01
+
+### Added
+
+- **One-click installs.** Claude Desktop extension `photoshop-mcp-imt.mcpb` (built by
+  `npm run build:mcpb` from `mcpb/manifest.json`, attached to every release; Claude Desktop ships
+  its own Node.js, the settings dialog carries the facade / UXP switches), an «Add to Cursor»
+  install link, `claude mcp add … npx -y @immersive-media-technologies/photoshop-mcp-imt`, and the
+  package on npm for every other client.
+- `install.sh` (macOS) and `install.ps1` (Windows): check Photoshop and Node, build, run
+  `tools/selftest.mjs` against the running Photoshop (ping, version, state, UXP bridge), then write
+  `mcpServers.photoshop` into Claude Desktop's and Cursor's config files after asking (backup
+  first); `--no-config`, `--yes`. The Windows script is not run by us yet.
+- Boolean environment flags accept `true` / `false` as well as `1` / `0` (`src/utils/env-flag.ts`)
+  — what MCPB user settings produce.
+
+### Changed
+
+- README: Install rewritten around the client routes (Claude Desktop, Cursor, Claude Code,
+  ChatGPT through a gateway + tunnel, any MCP client); package is published on npm
+  (`publishConfig.access: public`).
+
 ## [0.4.1] - 2026-10-01 — Immersive Media Technologies fork
 
 First public release of PS-MCP-IMT (the Immersive Media Technologies fork), based on upstream
