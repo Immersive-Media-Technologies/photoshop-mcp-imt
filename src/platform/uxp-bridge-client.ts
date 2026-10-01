@@ -1,7 +1,7 @@
 /**
  * Client for the MCP-hosted UXP bridge (health check + neural filter invoke).
  */
-import { ensureUxpBridgeServer, invokeUxpBridge, uxpPluginSeen } from './uxp-bridge-server.js';
+import { ensureUxpBridgeServer, invokeUxpBridge, refreshRelayHealth, uxpBridgeMode, uxpPluginSeen } from './uxp-bridge-server.js';
 import { envFlag } from '../utils/env-flag.js';
 
 const HEALTH_TIMEOUT_MS = 800;
@@ -12,6 +12,7 @@ export async function isUxpBridgeReachable(): Promise<boolean> {
   if (!envFlag('PS_MCP_UXP')) return false;
   try {
     const port = await ensureUxpBridgeServer();
+    if (uxpBridgeMode() === 'relay') return refreshRelayHealth();
     // плагин опрашивает раз в 400 мс — сразу после старта сервера ждём первый опрос (до 1.5 с)
     for (let i = 0; i < 15 && !uxpPluginSeen(); i++) await new Promise((r) => setTimeout(r, 100));
     if (!uxpPluginSeen()) return false;

@@ -131,6 +131,8 @@ ExtendScript is blocked. Install one of three ways, in this order of convenience
 Then Photoshop → Plugins → **Deep Artisan Bridge**; leave the panel in your workspace so the plugin
 loads with Photoshop. The port is protected by a shared-secret file the server creates on first
 start and the plugin reads; a request without it gets 401, `/health` is open and reveals nothing.
+Several MCP clients at once (Claude Desktop, Cursor, Deep Artisan …) share one bridge: the first
+server owns the port, the others relay to it.
 Honest about the boundary: the file is readable by any process of your user account (like an
 `.env`) — it protects against other users, sandboxes and a stray client on the port, not against
 malware running as you.

@@ -23,6 +23,16 @@ Versions 1.x below are the upstream history of
 - Boolean environment flags accept `true` / `false` as well as `1` / `0` (`src/utils/env-flag.ts`)
   — what MCPB user settings produce.
 
+### Fixed
+
+- **UXP bridge with several MCP clients on one machine.** Claude Desktop, Cursor and Deep Artisan
+  each start their own server, but the plugin polls one fixed port: the first instance owned it,
+  every later one silently listened on the next port, which the plugin never polls, and answered
+  «UXP bridge is not connected». Now a second instance recognises the owner on `/health` and
+  relays its commands to it over `POST /invoke` (same shared-secret token); when the owner goes
+  away the next call takes the port itself. Verified with Claude Desktop's own instance owning
+  the port and a second instance answering `ps_uxp ping` through it.
+
 ### Changed
 
 - README: Install rewritten around the client routes (Claude Desktop, Cursor, Claude Code,
