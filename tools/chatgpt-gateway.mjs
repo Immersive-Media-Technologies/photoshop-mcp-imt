@@ -47,10 +47,18 @@ console.log(`  tunnel:  ${tunnel}`);
 console.log('');
 
 const npx = isWin ? 'npx.cmd' : 'npx';
+// When this script itself runs under `npx -p <package> …`, npm leaves npm_config_* / npm_package_*
+// variables in the environment; a nested `npx -y supergateway` then looks only inside the
+// parent's temporary tree and fails with «supergateway: command not found». Strip them.
+function cleanEnv() {
+  const env = {};
+  for (const [k, v] of Object.entries(process.env)) if (!/^npm_/i.test(k)) env[k] = v;
+  return env;
+}
 const gateway = spawn(
   npx,
   ['-y', 'supergateway', '--stdio', `"${process.execPath}" "${ENTRY}"`, '--outputTransport', 'streamableHttp', '--port', String(port), '--streamableHttpPath', '/mcp'],
-  { env: { ...process.env, ...SERVER_ENV }, stdio: ['ignore', 'pipe', 'pipe'], shell: isWin }
+  { env: { ...cleanEnv(), ...SERVER_ENV }, stdio: ['ignore', 'pipe', 'pipe'], shell: isWin }
 );
 gateway.stdout.on('data', (d) => process.stdout.write(`[gateway] ${d}`));
 gateway.stderr.on('data', (d) => process.stderr.write(`[gateway] ${d}`));

@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Versions 1.x below are the upstream history of
 [alisaitteke/photoshop-mcp](https://github.com/alisaitteke/photoshop-mcp), kept as received.
 
+## [0.4.4] - 2026-10-01
+
+### Fixed
+
+- `…-chatgpt` run through `npx -p …` failed with «supergateway: command not found»: npm's
+  `npm_config_*` variables leaked into the nested `npx -y supergateway`, which then searched only
+  the parent's temporary tree. The gateway now strips them before spawning. Verified from a packed
+  tarball through `npx -p`: public URL printed, tunnel and gateway stop on Ctrl+C.
+- README: «Add to Cursor» button at a readable size.
+
 ## [0.4.3] - 2026-10-01
 
 ### Added
