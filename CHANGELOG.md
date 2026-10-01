@@ -14,8 +14,8 @@ Versions 1.x below are the upstream history of
 - **One-click installs.** Claude Desktop extension `photoshop-mcp-imt.mcpb` (built by
   `npm run build:mcpb` from `mcpb/manifest.json`, attached to every release; Claude Desktop ships
   its own Node.js, the settings dialog carries the facade / UXP switches), an «Add to Cursor»
-  install link, `claude mcp add … npx -y @immersive-media-technologies/photoshop-mcp-imt`, and the
-  package on npm for every other client.
+  install link, and the package on npm for every other client (`npx -y
+@immersive-media-technologies/photoshop-mcp-imt`).
 - `install.sh` (macOS) and `install.ps1` (Windows): check Photoshop and Node, build, run
   `tools/selftest.mjs` against the running Photoshop (ping, version, state, UXP bridge), then write
   `mcpServers.photoshop` into Claude Desktop's and Cursor's config files after asking (backup
@@ -35,8 +35,8 @@ Versions 1.x below are the upstream history of
 
 ### Changed
 
-- README: Install rewritten around the client routes (Claude Desktop, Cursor, Claude Code,
-  ChatGPT through a gateway + tunnel, any MCP client); package is published on npm
+- README: Install rewritten around the client routes (Claude Desktop, Cursor, ChatGPT through a
+  gateway + tunnel, any MCP client); package is published on npm
   (`publishConfig.access: public`).
 
 ## [0.4.1] - 2026-10-01 — Immersive Media Technologies fork

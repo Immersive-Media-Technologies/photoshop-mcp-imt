@@ -84,7 +84,6 @@ if ($NoConfig) {
   Write-ClientConfig "$env:APPDATA\Claude\claude_desktop_config.json" 'Claude Desktop'
   Write-ClientConfig "$env:USERPROFILE\.cursor\mcp.json" 'Cursor'
   Write-Host ""
-  Write-Host "Claude Code:  claude mcp add photoshop -e PS_MCP_FACADE=1 -e PS_MCP_UXP=1 -- `"$NodeBin`" `"$entry`""
   Write-Host "Other clients: `"mcpServers`": { `"photoshop`": $serverJson }"
 }
 Write-Host "`nStart with a copy of a real document: the agent edits what is open. The optional UXP panel plugin"

@@ -97,7 +97,6 @@ NODE
   write_config "$HOME/Library/Application Support/Claude/claude_desktop_config.json" "Claude Desktop"
   write_config "$HOME/.cursor/mcp.json" "Cursor"
   say ""
-  say "Claude Code:  claude mcp add photoshop -e PS_MCP_FACADE=1 -e PS_MCP_UXP=1 -- \"$NODE_BIN\" \"$HERE/dist/index.js\""
   say "Other clients: \"mcpServers\": { \"photoshop\": $SERVER_JSON }"
 fi
 say ""
