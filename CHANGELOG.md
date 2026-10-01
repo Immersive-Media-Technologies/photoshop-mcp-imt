@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Versions 1.x below are the upstream history of
 [alisaitteke/photoshop-mcp](https://github.com/alisaitteke/photoshop-mcp), kept as received.
 
+## [0.4.3] - 2026-10-01
+
+### Added
+
+- **ChatGPT route in one command**: `npx -p @immersive-media-technologies/photoshop-mcp-imt
+photoshop-mcp-imt-chatgpt` (`tools/chatgpt-gateway.mjs`, also `npm run chatgpt` from a checkout)
+  starts the server behind supergateway (Streamable HTTP on `127.0.0.1:8000/mcp`) and a tunnel
+  (`cloudflared`, no account, or `ngrok`), prints the public URL for ChatGPT → Settings →
+  Connectors, and stops both on Ctrl+C. Verified end to end through a public ngrok URL:
+  initialize, tools/list, `ps_do ping` → «Successfully connected to Photoshop».
+
+### Changed
+
+- README Install table: client icons, a smaller «Add to Cursor» button.
+
 ## [0.4.2] - 2026-10-01
 
 ### Added

@@ -1,6 +1,6 @@
 {
   "name": "@immersive-media-technologies/photoshop-mcp-imt",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "PS-MCP-IMT — MCP server for Adobe Photoshop built for autonomous AI agents (macOS + Windows): 134 tools behind a 9-tool facade, a UXP bridge that keeps working when Photoshop is modal, headless corner-pin/perspective, honest busy/timeout errors, no telemetry. By Immersive Media Technologies (fork of alisaitteke/photoshop-mcp).",
   "keywords": [
     "adobe",
@@ -30,12 +30,14 @@
   "main": "dist/index.js",
   "type": "module",
   "bin": {
-    "photoshop-mcp-imt": "dist/index.js"
+    "photoshop-mcp-imt": "dist/index.js",
+    "photoshop-mcp-imt-chatgpt": "tools/chatgpt-gateway.mjs"
   },
   "files": [
     "dist",
     "uxp-plugin",
     "tools/selftest.mjs",
+    "tools/chatgpt-gateway.mjs",
     "install.sh",
     "install.ps1",
     "README.md",
@@ -67,7 +69,8 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "build:mcpb": "node scripts/build-mcpb.mjs",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "chatgpt": "node tools/chatgpt-gateway.mjs"
   },
   "engines": {
     "node": ">=18.0.0"
