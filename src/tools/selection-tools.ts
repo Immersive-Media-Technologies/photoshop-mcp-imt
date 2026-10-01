@@ -199,7 +199,8 @@ export function createSelectionTools(connection: PhotoshopConnection): ToolDefin
           'Use when: masking, cropping a region, or preparing for layer mask.\n' +
           'Do NOT use when: subject isolation is needed — use photoshop_recipe_remove_background.\n\n' +
           'Returns: selection bounds [left, top, right, bottom].\n' +
-          'Preconditions: active document. Side effects: replaces current selection.',
+          'Preconditions: active document. Side effects: replaces, adds, subtracts, or intersects the current selection.\n' +
+          'mode intersect/add/subtract uses Action Manager and does not depend on the SelectionType enum.',
         inputSchema: {
           type: 'object',
           properties: {
@@ -218,6 +219,12 @@ export function createSelectionTools(connection: PhotoshopConnection): ToolDefin
             bottom: {
               type: 'number',
               description: 'Bottom edge in pixels',
+            },
+            mode: {
+              type: 'string',
+              enum: ['replace', 'add', 'subtract', 'intersect'],
+              description:
+                'How this rectangle combines with the current selection. Default replace. Use intersect when SelectionType.INTERSECT is unavailable.',
             },
           },
           required: ['left', 'top', 'right', 'bottom'],
@@ -543,12 +550,18 @@ async function selectRectangle(
   const top = args.top as number;
   const right = args.right as number;
   const bottom = args.bottom as number;
+  const modeRaw = typeof args.mode === 'string' ? args.mode : 'replace';
+  const mode = (['replace', 'add', 'subtract', 'intersect'] as const).includes(
+    modeRaw as 'replace' | 'add' | 'subtract' | 'intersect'
+  )
+    ? (modeRaw as 'replace' | 'add' | 'subtract' | 'intersect')
+    : 'replace';
 
   try {
     const apiFactory = new PhotoshopAPIFactory(connection);
     const api = await apiFactory.createAPI();
 
-    const script = ExtendScriptSnippets.selectRectangle(left, top, right, bottom);
+    const script = ExtendScriptSnippets.selectRectangle(left, top, right, bottom, mode);
     await api.executeScript(script);
 
     return {

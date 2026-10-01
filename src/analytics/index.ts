@@ -26,7 +26,9 @@ export function capture(..._args: unknown[]): void {}
 export function identifyAnalyticsPerson(..._args: unknown[]): void {}
 export function identifyPhotoshopVersion(_version: string): void {}
 export function captureAnalyticsMilestoneOnce(..._args: unknown[]): void {}
-export function startMcpAnalyticsSession(): void {}
+export function startMcpAnalyticsSession(..._args: unknown[]): void {}
+export function startLogicalMcpAnalyticsSession(..._args: unknown[]): void {}
+export function recordMcpPromptRequest(..._args: unknown[]): void {}
 export function captureMcpPageview(): void {}
 export function endMcpAnalyticsSession(..._args: unknown[]): void {}
 export function onMcpClientConnected(..._args: unknown[]): void {}

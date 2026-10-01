@@ -1,12 +1,10 @@
 {
+  "note": "claude mcp add photoshop -e PS_MCP_FACADE=1 -e PS_MCP_UXP=1 -- node /ABSOLUTE/PATH/TO/photoshop-mcp-imt/dist/index.js",
   "mcpServers": {
     "photoshop": {
-      "command": "npx",
-      "args": ["-y", "@alisaitteke/photoshop-mcp"],
-      "env": {
-        "LOG_LEVEL": "1",
-        "PHOTOSHOP_PATH": ""
-      }
+      "command": "node",
+      "args": ["/ABSOLUTE/PATH/TO/photoshop-mcp-imt/dist/index.js"],
+      "env": { "PS_MCP_FACADE": "1", "PS_MCP_UXP": "1" }
     }
   }
 }

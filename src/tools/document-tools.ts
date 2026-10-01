@@ -66,11 +66,11 @@ export function createDocumentTools(connection: PhotoshopConnection): ToolDefini
       tool: {
         name: 'photoshop_list_documents',
         description:
-          'List every open Photoshop document with id, dimensions, and which tab is active (read-only).\n\n' +
-          'Use when: multiple documents are open and you need document_id before switching tabs or closing a specific file.\n' +
+          'List every open Photoshop document with id, dimensions, saved flag, artboard_count, and which tab is active.\n\n' +
+          'Use when: multiple documents are open and you need document_id before switching tabs, previewing, or closing a specific file.\n' +
           'Do NOT use when: you only need the active document — use photoshop_get_document_info or photoshop_get_state.\n\n' +
-          'Returns: JSON { ok, summary, details: { count, documents[], active_document_id, context } }.\n' +
-          'Preconditions: none (safe when zero documents open). Side effects: none.',
+          'Returns: JSON { ok, summary, details: { count, documents[] (id, name, width, height, saved, artboard_count, is_active), active_document_id, context } }.\n' +
+          'Preconditions: none (safe when zero documents open). Side effects: briefly activates each tab to read artboard_count, then restores the original active document.',
         inputSchema: {
           type: 'object',
           properties: {},
@@ -147,7 +147,12 @@ export function createDocumentTools(connection: PhotoshopConnection): ToolDefini
     {
       tool: {
         name: 'photoshop_close_document',
-        description: 'Close the active Photoshop document',
+        description:
+          'Close a Photoshop document tab. Defaults to the active document; pass document_id to close a specific open file.\n\n' +
+          'Use when: the user is done with a file, or when cleaning up extra open tabs after photoshop_list_documents.\n' +
+          'Do NOT use when: you only need to switch tabs — use photoshop_set_active_document.\n\n' +
+          'Returns: confirmation that the document closed.\n' +
+          'Preconditions: target document is open. Side effects: closes that tab; save=true writes unsaved changes first.',
         inputSchema: {
           type: 'object',
           properties: {

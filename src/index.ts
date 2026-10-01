@@ -2,14 +2,13 @@
 
 import {
   capture,
-  captureMcpPageview,
   endMcpAnalyticsSession,
   ensureAnalyticsIdentity,
   getAppVersion,
   identifyAnalyticsPerson,
   onMcpClientDisconnected,
   shutdownAnalytics,
-  startMcpAnalyticsSession,
+  startLogicalMcpAnalyticsSession,
 } from './analytics/index.js';
 import type { McpShutdownReason } from './analytics/mcp-session.js';
 import { PhotoshopMCPServer } from './core/server.js';
@@ -36,12 +35,9 @@ async function main() {
       ...(photoshopVersion ? { photoshop_version: photoshopVersion } : {}),
     });
 
-    startMcpAnalyticsSession();
-    captureMcpPageview();
-    capture('mcp_session_started', {
+    startLogicalMcpAnalyticsSession({
       photoshop_detected: mcpServer.isPhotoshopConnected(),
       tools_registered_count: mcpServer.getToolCount(),
-      event_source: 'mcp',
     });
 
     logger.info('Photoshop MCP Server is running');

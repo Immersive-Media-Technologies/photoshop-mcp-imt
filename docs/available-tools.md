@@ -1,6 +1,6 @@
 # Available Tools
 
-**116 tools total** — 100 atomic `photoshop_*` tools plus 16 recipe `photoshop_recipe_*` workflows (single undo step each).
+**134 tools registered** — 109 atomic `photoshop_*` tools (upstream's set plus this fork's `photoshop_distort_layer`), 16 recipe `photoshop_recipe_*` workflows (single undo step each) and the 9 `ps_*` facade tools; `ps_uxp` joins when the UXP bridge is on. With `PS_MCP_FACADE=1` a client sees only the 9 facade tools and reaches every other one through `ps_do` (see README). The upstream feedback-nudge tool is not part of this fork.
 
 Reference for all atomic `photoshop_*` MCP tools exposed by this server (parameters, examples, and return shapes).
 
@@ -9,7 +9,7 @@ Reference for all atomic `photoshop_*` MCP tools exposed by this server (paramet
 ### Connection & Info
 
 #### `photoshop_ping`
-Test connection to Photoshop.
+Run a short script in Photoshop. Success means the scripting engine is idle. While a previous script is still running, the call returns `extendscript_timeout` instead of succeeding; retry ping before `photoshop_get_state` or `photoshop_get_layers`. If the OS drive has under 10 GB free, a timeout is reported as `scratch_disk_full` instead. Does not launch Photoshop when it is not running.
 
 ```javascript
 // Example: Check if Photoshop is accessible
@@ -54,7 +54,7 @@ photoshop_get_document_info()
 ```
 
 #### `photoshop_list_documents`
-List all open documents with id, name, dimensions, resolution, and active-tab flag (read-only).
+List all open documents with id, name, dimensions, resolution, `saved`, `artboard_count`, and active-tab flag. Briefly activates each tab to count artboards, then restores the original active document.
 
 **Parameters:** none
 
@@ -81,6 +81,45 @@ photoshop_set_active_document({ index: 0 })
 
 Mutating tools (and most document-scoped reads) also accept optional `document_id`. Pass the id from `photoshop_get_state` / `photoshop_list_documents` so a Photoshop UI tab switch cannot retarget the edit. Omitted = current active document (previous behavior). Unknown ids fail with `document_not_found`.
 
+#### `photoshop_list_artboards`
+List artboards in the active document (id, name, pixel bounds, `is_active`). Empty when the file is a regular canvas.
+
+```javascript
+photoshop_list_artboards()
+```
+
+#### `photoshop_create_artboard`
+Create an artboard. First artboard converts a regular document. Additional boards are placed 32px to the right unless `left`/`top` are set.
+
+**Parameters:**
+- `width` / `height` (number, required): size in pixels
+- `name` (string, optional)
+- `left` / `top` (number, optional): origin in pixels
+
+```javascript
+photoshop_create_artboard({ name: "iPhone", width: 390, height: 844 })
+photoshop_create_artboard({ name: "iPad", width: 768, height: 1024 })
+```
+
+#### `photoshop_set_active_artboard`
+Select an artboard by `artboard_id` (preferred) or unique `name`.
+
+```javascript
+photoshop_set_active_artboard({ artboard_id: 12 })
+```
+
+#### `photoshop_export_artboards`
+Export every artboard to a folder (duplicate + crop). Uses a 600s script timeout.
+
+**Parameters:**
+- `folder` (string, required): absolute output directory
+- `format` (string, optional): PNG, JPEG, WEBP, AVIF
+- `quality` (number, optional): 0–100
+
+```javascript
+photoshop_export_artboards({ folder: "/tmp/boards", format: "PNG" })
+```
+
 #### `photoshop_save_document`
 Save the active document.
 
@@ -99,14 +138,16 @@ photoshop_save_document({
 ```
 
 #### `photoshop_close_document`
-Close the active document.
+Close a document tab. Defaults to the active document; pass `document_id` from `photoshop_list_documents` to close a specific file.
 
 **Parameters:**
 - `save` (boolean, optional): Save before closing (default: false)
+- `document_id` (number, optional): Close that open document instead of the front tab
 
 ```javascript
 // Example: Close without saving
 photoshop_close_document({ save: false })
+photoshop_close_document({ save: false, document_id: 42 })
 ```
 
 ### Layer Operations
@@ -131,7 +172,7 @@ photoshop_delete_layer()
 ```
 
 #### `photoshop_create_text_layer`
-Create a text layer.
+Create a text layer. Optional typography fields avoid a follow-up `execute_script`.
 
 **Parameters:**
 - `text` (string, required): Text content
@@ -139,15 +180,28 @@ Create a text layer.
 - `y` (number, optional): Y position in pixels (default: 100)
 - `fontSize` (number, optional): Font size in points (default: 24)
 - `fontName` (string, optional): Font display or PostScript name (see `photoshop_list_fonts`)
+- `tracking` (number, optional): Character spacing in 1/1000 em (−1000 to 10000)
+- `leading` (number, optional): Line height in points
+- `auto_leading` (boolean, optional): Photoshop auto leading
+- `kind` (string, optional): `point` or `paragraph`
+- `box_width` / `box_height` (number, optional): Paragraph text box size in pixels (implies `kind=paragraph`)
+- `alignment` (string, optional): LEFT, CENTER, RIGHT, LEFTJUSTIFIED, CENTERJUSTIFIED, RIGHTJUSTIFIED, FULLYJUSTIFIED
+- `red` / `green` / `blue` (number, optional): Text color 0–255
 
 ```javascript
-// Example: Create a text layer with Arial
+// Example: Paragraph title with tracking
 photoshop_create_text_layer({
   text: "Hello World",
   x: 200,
   y: 150,
   fontSize: 48,
-  fontName: "Arial"
+  fontName: "Arial",
+  tracking: 80,
+  leading: 56,
+  kind: "paragraph",
+  box_width: 600,
+  box_height: 160,
+  alignment: "CENTER"
 })
 ```
 
@@ -621,6 +675,37 @@ Update text content of active text layer.
 photoshop_update_text_content({ text: "New Text" })
 ```
 
+#### `photoshop_set_text_style`
+Layer-wide typography on the active text layer (tracking, leading, paragraph box, alignment, font, size, color).
+
+**Parameters:** all optional, at least one required — same names as `photoshop_create_text_layer` style fields (`tracking`, `leading`, `auto_leading`, `kind`, `box_width`, `box_height`, `alignment`, `fontName`, `fontSize`, `red`/`green`/`blue`).
+
+```javascript
+photoshop_set_text_style({
+  tracking: 120,
+  leading: 40,
+  kind: "paragraph",
+  box_width: 500,
+  box_height: 180,
+  alignment: "CENTER"
+})
+```
+
+#### `photoshop_set_text_ranges`
+Mixed fonts/sizes/colors inside one text layer (`textStyleRange`). `from` inclusive, `to` exclusive.
+
+**Parameters:**
+- `ranges` (array, required): `{ from, to, fontName?, fontSize?, red?, green?, blue? }[]` (max 64, no overlaps)
+
+```javascript
+photoshop_set_text_ranges({
+  ranges: [
+    { from: 0, to: 5, red: 220, green: 40, blue: 40, fontName: "Arial" },
+    { from: 6, to: 11, red: 30, green: 80, blue: 200, fontName: "Times New Roman" }
+  ]
+})
+```
+
 ### Selections & Masks
 
 #### `photoshop_get_selection_bounds`
@@ -889,8 +974,11 @@ Execute custom ExtendScript code (advanced).
 
 **Parameters:**
 - `code` (string, required): ExtendScript code
+- `timeout_ms` (number, optional): 1000–600000 (default 30000, or `PHOTOSHOP_SCRIPT_TIMEOUT`)
 
 Your code runs inside a wrapping IIFE on the server side. Use an explicit `return` to pass data back — a bare trailing expression or assignment (e.g. `layer.name = "X"`) evaluates to `undefined`, so the tool result shows `"undefined"` even when the mutation succeeded.
+
+Long loops should pass `timeout_ms`. Batch recipes (`batch_watermark`, `csv_to_cards`, …) already use 600s.
 
 ```javascript
 // Example: Rename the active layer and return confirmation
@@ -1146,3 +1234,4 @@ Export a copy as PNG/JPEG (Save for Web) or WebP/AVIF (native, PS 23.2+). Return
 - `path` (string, required): Absolute output path
 - `format` (string, optional): `PNG` | `JPEG` | `WEBP` | `AVIF` (default PNG)
 - `quality` (number, optional): 0-100 (default 80)
+- `artboard_id` (number, optional): export only that artboard (from `photoshop_list_artboards`)

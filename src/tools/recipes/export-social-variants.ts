@@ -1,7 +1,7 @@
 import { ToolDefinition, ToolResult } from '../../core/tool-registry.js';
 import { resolveExportPath } from '../../lib/export-paths.js';
 import { PhotoshopConnection } from '../../platform/connection.js';
-import { clampInt, executeRecipe, jsString } from './_shared.js';
+import { clampInt, executeRecipe, jsString, BATCH_SCRIPT_TIMEOUT_MS } from './_shared.js';
 
 const TOOL_NAME = 'photoshop_recipe_export_social_variants';
 
@@ -174,7 +174,7 @@ async function runExportSocialVariants(
     };
   `;
 
-  return executeRecipe(connection, 'Export Social Variants', body);
+  return executeRecipe(connection, 'Export Social Variants', body, BATCH_SCRIPT_TIMEOUT_MS);
 }
 
 function parsePlatforms(raw: unknown): PlatformSpec[] {

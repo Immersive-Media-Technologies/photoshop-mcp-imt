@@ -1,19 +1,45 @@
 {
-  "name": "@deepartisan/ps-mcp",
-  "version": "1.7.15",
-  "description": "Deep Artisan fork of alisaitteke/photoshop-mcp: stdio MCP server for Adobe Photoshop (ExtendScript via osascript), telemetry and web UI removed, ps_catalog/ps_do facade.",
+  "name": "@immersive-media-technologies/photoshop-mcp-imt",
+  "version": "0.4.1",
+  "private": true,
+  "description": "PS-MCP-IMT — MCP server for Adobe Photoshop built for autonomous AI agents (macOS + Windows): 134 tools behind a 9-tool facade, a UXP bridge that keeps working when Photoshop is modal, headless corner-pin/perspective, honest busy/timeout errors, no telemetry. By Immersive Media Technologies (fork of alisaitteke/photoshop-mcp).",
+  "keywords": [
+    "adobe",
+    "photoshop",
+    "claude",
+    "extendscript",
+    "uxp",
+    "llm",
+    "mcp",
+    "model-context-protocol",
+    "image-editing",
+    "ai-agents"
+  ],
+  "homepage": "https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt#readme",
+  "bugs": {
+    "url": "https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt/issues"
+  },
+  "license": "SEE LICENSE IN LICENSE",
+  "author": {
+    "name": "Immersive Media Technologies",
+    "url": "https://github.com/Immersive-Media-Technologies"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt.git"
+  },
   "main": "dist/index.js",
   "type": "module",
   "bin": {
-    "ps-mcp": "dist/index.js"
+    "photoshop-mcp-imt": "dist/index.js"
   },
   "files": [
     "dist",
     "uxp-plugin",
     "README.md",
-    "README-DEEPARTISAN.md",
     "LICENSE",
-    "LICENSE-DEEPARTISAN"
+    "NOTICE",
+    "THIRD-PARTY-NOTICES.md"
   ],
   "scripts": {
     "dev": "tsc --watch",
@@ -32,34 +58,9 @@
     "test:intent-expansion": "tsx scripts/test-intent-expansion-local.ts",
     "test:unit": "vitest run",
     "verify:tool-counts": "tsx scripts/verify-tool-counts.ts",
-    "build:uxp": "node scripts/pack-uxp.mjs"
-  },
-  "keywords": [
-    "mcp",
-    "model-context-protocol",
-    "photoshop",
-    "adobe",
-    "automation",
-    "ai",
-    "ai-agents",
-    "cursor",
-    "claude",
-    "image-editing",
-    "typescript",
-    "extendscript",
-    "developer-tools",
-    "vue",
-    "hono"
-  ],
-  "author": "Ali Sait Teke (https://alisait.com)",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/alisaitteke/photoshop-mcp.git"
-  },
-  "homepage": "https://photoshop-mcp.com/",
-  "bugs": {
-    "url": "https://github.com/alisaitteke/photoshop-mcp/issues"
+    "build:uxp": "node scripts/pack-uxp.mjs",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
   },
   "engines": {
     "node": ">=18.0.0"
@@ -79,11 +80,5 @@
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",
     "vitest": "^4.1.10"
-  },
-  "packageManager": "pnpm@10.33.0+sha512.10568bb4a6afb58c9eb3630da90cc9516417abebd3fabbe6739f0ae795728da1491e9db5a544c76ad8eb7570f5c4bb3d6c637b2cb41bfdcdb47fa823c8649319",
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild"
-    ]
   }
 }
