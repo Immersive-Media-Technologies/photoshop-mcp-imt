@@ -196,6 +196,8 @@ Each version is described on the
 [**Releases**](https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt/releases) page —
 what the server does at that version and what the release added:
 
+- [v0.4.5](https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt/releases/tag/v0.4.5) · 2026-10-03 —
+  fix: Photoshop is detected automatically on the first call (no more «detect Photoshop first»).
 - [v0.4.4](https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt/releases/tag/v0.4.4) · 2026-10-01 —
   fix: the ChatGPT gateway command under `npx -p`.
 - [v0.4.3](https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt/releases/tag/v0.4.3) · 2026-10-01 —
