@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Versions 1.x below are the upstream history of
 [alisaitteke/photoshop-mcp](https://github.com/alisaitteke/photoshop-mcp), kept as received.
 
+## [0.4.5] - 2026-10-03
+
+### Fixed
+
+- The first call of a session could fail with «Photoshop info not available. Please detect
+  Photoshop first.» when the cached detection had expired: `ps_get_state`, `ps_do` and every tool
+  built on the API factory told the agent to run a detect tool that the facade does not expose.
+  Detection is now performed by the factory itself (cache, then the platform detector); only a
+  machine with no Photoshop installed gets an error, and it says so.
+
 ## [0.4.4] - 2026-10-01
 
 ### Fixed
