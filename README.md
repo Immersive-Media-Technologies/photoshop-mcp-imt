@@ -63,9 +63,8 @@ The agent combines the operations itself through `ps_do`, checking `ps_get_state
 
 ## Install
 
-Requirements: Adobe Photoshop 2024+ running on this computer (2026 verified). On macOS the first
-call asks for permission to control Photoshop through Automation (System Settings → Privacy &
-Security → Automation; AppleScript error −1743 means it was denied). Pick the route for your client:
+Requirements: Adobe Photoshop 2024+ running on this computer (2026 verified), macOS or Windows —
+platform specifics are in the two sub-sections below the table. Pick the route for your client:
 
 | Client                                                                                                                                                            | Route                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | What you need                                                                                                                                             |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -87,20 +86,38 @@ Security → Automation; AppleScript error −1743 means it was denied). Pick th
 }
 ```
 
-**From source, with a live self-test** (the route we run ourselves): clone, then `./install.sh` on
-macOS or `.\install.ps1` on Windows. The script checks Photoshop and Node, builds the server and the
-UXP plugin, pings the running Photoshop through the real transport, and — after asking — writes
-the entry into Claude Desktop's, Cursor's and Google Antigravity's config files (backing them up first). `--no-config`
-only prints the snippet; `--yes` skips the questions.
+### macOS
+
+Verified daily (Photoshop 2026, 27.9–27.10). The server drives Photoshop through AppleScript; the
+first call asks for the Automation permission (System Settings → Privacy & Security → Automation;
+AppleScript error −1743 means it was denied). From source, with a live self-test — the route we
+run ourselves:
 
 ```bash
 git clone https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt.git
 cd photoshop-mcp-imt && ./install.sh
 ```
 
-**Windows.** The server talks to Photoshop through COM (`cscript` + a VBScript shim, results
-decoded as UTF-16). Set `PHOTOSHOP_PATH` when Photoshop is not under `C:\Program Files\Adobe`.
-Verified on Windows 11 with Photoshop 2026 (see «Verified on»); the bridge retries the transient COM «busy» error (`PSMCP_BUSY_RETRY_MS`, default 2000 ms).
+The script checks Photoshop and Node, builds the server and the UXP plugin, pings the running
+Photoshop through the real transport, and — after asking — writes the entry into Claude Desktop's,
+Cursor's and Google Antigravity's config files (backing them up first). `--no-config` only prints
+the snippet; `--yes` skips the questions.
+
+### Windows
+
+Verified on Windows 11 with Photoshop 2026 (same live sweep as macOS: 193 / 0 / 11). The server
+talks to Photoshop through COM (`cscript` + a VBScript shim, results decoded as UTF-16); the bridge
+retries the transient COM «busy» error (`PSMCP_BUSY_RETRY_MS`, default 2000 ms). Set
+`PHOTOSHOP_PATH` when Photoshop is not under `C:\Program Files\Adobe`.
+
+- **Claude Desktop:** the `.mcpb` has no file association on Windows — if a double-click shows an
+  app picker, drag the file onto Settings → Extensions instead.
+- **From source:** `.\install.ps1` (same steps as `install.sh`; if scripts are blocked:
+  `powershell -ExecutionPolicy Bypass -File .\install.ps1`). Node.js 18+ from nodejs.org; Git
+  for Windows or MinGit.
+- **UXP bridge:** on Windows x64 install the `.ccx` as on macOS. On **Windows on ARM** Photoshop
+  has no Plugins menu and loads no third-party UXP plugins at all (Adobe has not enabled the
+  plugin infrastructure there yet) — the server works without the bridge.
 
 | Variable                    | Default                                 | Meaning                                                                                             |
 | --------------------------- | --------------------------------------- | --------------------------------------------------------------------------------------------------- |
@@ -128,11 +145,6 @@ ExtendScript is blocked. Install one of three ways, in this order of convenience
    Plugin → `uxp-plugin/manifest.json` → Load.
 3. Manual layout into Adobe's UXP plugin folder plus one entry in `PluginsInfo/v1/PS.json` —
    exact paths and the JSON line in [`docs/development.md`](docs/development.md).
-
-**Windows on ARM:** Photoshop there has no Plugins menu and loads no third-party UXP plugins at all
-(Adobe has not enabled the plugin infrastructure on Windows ARM yet — Creative Cloud, UPIA and
-UXP Developer Tools do not install plugins there). The server works without the bridge; the
-UXP transport is verified on macOS and applies to Windows x64.
 
 Then Photoshop → Plugins → **Deep Artisan Bridge**; leave the panel in your workspace so the plugin
 loads with Photoshop. The port is protected by a shared-secret file the server creates on first
