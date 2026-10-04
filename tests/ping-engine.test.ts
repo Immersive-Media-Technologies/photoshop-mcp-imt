@@ -74,13 +74,29 @@ describe('probePhotoshopEngine', () => {
     expect(execute).not.toHaveBeenCalled();
   });
 
-  it('does not report success when the probe times out on a busy engine', async () => {
+  // The timeout path asks Photoshop directly whether it is alive (probeResponsive,
+  // osascript). Left unmocked, the answer came from the machine running the tests:
+  // «alive» on a Mac with Photoshop open, «busy» on the Linux CI runner — the test
+  // passed locally and failed in CI. Both answers are pinned now.
+  it('does not report success when the probe times out and Photoshop still answers', async () => {
     vi.spyOn(MacOSExecutor.prototype, 'isPhotoshopRunning').mockResolvedValue(true);
+    vi.spyOn(MacOSExecutor.prototype, 'probeResponsive').mockResolvedValue(true);
     vi.spyOn(MacOSExecutor.prototype, 'execute').mockRejectedValue(
       new Error('Script execution timeout')
     );
     await expect(probePhotoshopEngine(new PhotoshopConnection())).rejects.toThrow(
       /script execution timeout/i
+    );
+  });
+
+  it('reports «Photoshop busy» when the probe times out and Photoshop does not answer', async () => {
+    vi.spyOn(MacOSExecutor.prototype, 'isPhotoshopRunning').mockResolvedValue(true);
+    vi.spyOn(MacOSExecutor.prototype, 'probeResponsive').mockResolvedValue(false);
+    vi.spyOn(MacOSExecutor.prototype, 'execute').mockRejectedValue(
+      new Error('Script execution timeout')
+    );
+    await expect(probePhotoshopEngine(new PhotoshopConnection())).rejects.toThrow(
+      /Photoshop busy/
     );
   });
 });
