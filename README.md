@@ -13,8 +13,9 @@ can use the same layer. A fork of
 with a second transport, a small tool surface, honest errors and no telemetry.
 
 **macOS and Windows · Photoshop 2024–2026 · Node.js 18+ (we run 26).** macOS is what we run every
-day (Photoshop 2026, 27.9–27.10); the Windows transport (ExtendScript through COM) is inherited from
-upstream with its UTF-16 result fix and works the same way — reports from Windows users are welcome.
+day (Photoshop 2026, 27.9–27.10); the Windows transport (ExtendScript through COM, with the UTF-16
+result fix and a retry on the COM «busy» error) passes the same live sweep on Windows 11 with
+Photoshop 2026 — reports from Windows users are still welcome.
 
 > [!CAUTION]
 > This tool edits real Photoshop documents and sends document contents (names, layer structure,
@@ -39,7 +40,7 @@ transport inside Photoshop (UXP)** for exactly those moments, shows the agent **
 | Telemetry               | **none** — analytics module is a no-op, feedback nudge removed, server sends nothing                                                                                                                                                                                                                          | anonymous analytics **on by default** (opt-out), product-feedback nudge via `photoshop_ping` | —                                                                       | —                                                        |
 | Undo                    | recipes = one history state (upstream); `photoshop_busy` / `command_unavailable` / `extendscript_timeout` / `scratch_disk_full` tell the agent _why_ instead of a generic timeout                                                                                                                             | recipes = one history state; `extendscript_timeout`, `scratch_disk_full`                     | —                                                                       | staged install with `--dry-run` / receipts               |
 | Install                 | **one click**: `.mcpb` for Claude Desktop (no Node needed), «Add to Cursor» button, `npx` for any other client; `install.sh` / `install.ps1` with a live self-test that write the client configs; UXP plugin as `.ccx`, UXP Developer Tools or a manual layout — every path documented with its failure modes | `npx -y @alisaitteke/photoshop-mcp`; UXP plugin for Neural Filters only                      | Python 3 + Node + UXP Developer Tools + proxy process                   | `pip install` or binaries; Rust broker                   |
-| Verified on             | **Photoshop 2026 (27.9–27.10), macOS, UXP 9.4.1, Russian and English UI** — live sweep of every tool: 193 pass / 0 fail / 11 environment skips (2026-10-01); Windows transport inherited, not run by us                                                                                                       | Windows + macOS                                                                              | Photoshop 26+, macOS + Windows                                          | Windows, Linux, macOS                                    |
+| Verified on             | **Photoshop 2026 (27.9–27.10), macOS, UXP 9.4.1, Russian and English UI** — live sweep of every tool: 193 pass / 0 fail / 11 environment skips (2026-10-01); **Windows 11 (ARM) + Photoshop 2026** — same sweep, 193 / 0 / 11 (2026-10-04)                                                                                                       | Windows + macOS                                                                              | Photoshop 26+, macOS + Windows                                          | Windows, Linux, macOS                                    |
 | License                 | **IMT Non-Commercial** for our work (attribution + link required, free for non-commercial use); upstream code stays MIT                                                                                                                                                                                       | MIT                                                                                          | MIT                                                                     | MIT                                                      |
 
 Facts about other projects are from their READMEs and repository metadata on GitHub on 2026-10-01
@@ -90,7 +91,7 @@ Security → Automation; AppleScript error −1743 means it was denied). Pick th
 macOS or `.\install.ps1` on Windows. The script checks Photoshop and Node, builds the server and the
 UXP plugin, pings the running Photoshop through the real transport, and — after asking — writes
 the entry into Claude Desktop's, Cursor's and Google Antigravity's config files (backing them up first). `--no-config`
-only prints the snippet; `--yes` skips the questions. The Windows script is not run by us yet.
+only prints the snippet; `--yes` skips the questions.
 
 ```bash
 git clone https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt.git
@@ -99,7 +100,7 @@ cd photoshop-mcp-imt && ./install.sh
 
 **Windows.** The server talks to Photoshop through COM (`cscript` + a VBScript shim, results
 decoded as UTF-16). Set `PHOTOSHOP_PATH` when Photoshop is not under `C:\Program Files\Adobe`.
-Inherited from upstream, not run by us — see «Verified on» above.
+Verified on Windows 11 with Photoshop 2026 (see «Verified on»); the bridge retries the transient COM «busy» error (`PSMCP_BUSY_RETRY_MS`, default 2000 ms).
 
 | Variable                    | Default                                 | Meaning                                                                                             |
 | --------------------------- | --------------------------------------- | --------------------------------------------------------------------------------------------------- |
@@ -127,6 +128,11 @@ ExtendScript is blocked. Install one of three ways, in this order of convenience
    Plugin → `uxp-plugin/manifest.json` → Load.
 3. Manual layout into Adobe's UXP plugin folder plus one entry in `PluginsInfo/v1/PS.json` —
    exact paths and the JSON line in [`docs/development.md`](docs/development.md).
+
+**Windows on ARM:** Photoshop there has no Plugins menu and loads no third-party UXP plugins at all
+(Adobe has not enabled the plugin infrastructure on Windows ARM yet — Creative Cloud, UPIA and
+UXP Developer Tools do not install plugins there). The server works without the bridge; the
+UXP transport is verified on macOS and applies to Windows x64.
 
 Then Photoshop → Plugins → **Deep Artisan Bridge**; leave the panel in your workspace so the plugin
 loads with Photoshop. The port is protected by a shared-secret file the server creates on first

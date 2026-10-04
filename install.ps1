@@ -3,7 +3,7 @@
 #   .\install.ps1 -Yes         same, without questions
 #   .\install.ps1 -NoConfig    check, build and self-test only; print the config instead
 # If scripts are blocked: powershell -ExecutionPolicy Bypass -File .\install.ps1
-# Not verified by Immersive Media Technologies on Windows yet (we run macOS) - reports welcome.
+# Verified on Windows 11 (ARM) with Photoshop/After Effects 2026 - 2026-10-04.
 param([switch]$Yes, [switch]$NoConfig)
 $ErrorActionPreference = 'Continue'
 $Here = Split-Path -Parent $MyInvocation.MyCommand.Path

@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Versions 1.x below are the upstream history of
 [alisaitteke/photoshop-mcp](https://github.com/alisaitteke/photoshop-mcp), kept as received.
 
+## [0.4.6] - 2026-10-04
+
+Windows verified: Windows 11 (ARM, Parallels) with Photoshop 2026 — live sweep of every tool
+193 pass / 0 fail / 11 environment skips, the same result as macOS.
+
+### Fixed
+
+- Windows: back-to-back calls could fail with «General Photoshop error occurred» — the COM
+  server answers that while it is still digesting the previous command (three reads in a row
+  failed in ~225 ms each). The cscript bridge now retries with 150 ms pauses, bounded by
+  `PSMCP_BUSY_RETRY_MS` (default 2000).
+- Windows: `install.ps1` did not parse in Windows PowerShell 5.1 (a non-ASCII dash in a string
+  read through the ANSI code page). The script is ASCII-only now, guarded by a test.
+- Windows: `npm run build` failed on the UXP plugin step — no `zip` on Windows; the `.ccx` is
+  packed with the system `tar` there.
+- Windows: the UXP plugin looked for the bridge token at `file://C:\Users\…` — now
+  `file:///C:/Users/…/.deepartisan/state/uxp-bridge.token`.
+- Windows: the detector reported the marketing year («2026») as the version — now the product
+  version from `Photoshop.exe`; Photoshop 2026 under `Program Files` was found only through the
+  registry — the path list now reaches next year's release, like the macOS detector.
+- `test:mcp-all` no longer needs python3 (the test PNG is written with `node:zlib`).
+
+### Notes
+
+- Windows on ARM: Photoshop has no Plugins menu and loads no third-party UXP plugins (Adobe has
+  not enabled the plugin infrastructure there yet), so the UXP bridge cannot be used on that
+  platform; the COM transport and the relay mode are unaffected. Verified on Windows 11 ARM:
+  the relay — a second server instance detects the port owner and forwards to it, 401 without
+  the token. The UXP bridge itself stays verified on macOS.
+
 ## [0.4.5] - 2026-10-03
 
 ### Fixed
