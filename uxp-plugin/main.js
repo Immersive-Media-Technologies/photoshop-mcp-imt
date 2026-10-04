@@ -25,7 +25,9 @@ let bridgeToken = '';
 let tokenWarned = false;
 function tokenPath() {
   const home = (() => { try { return require('os').homedir(); } catch (e) { return ''; } })();
-  return `file://${home}/.deepartisan/state/uxp-bridge.token`;
+  // Windows: homedir «C:\Users\x» → file:///C:/Users/x (macOS — как было: file:///Users/x).
+  const h = home.replace(/\\/g, '/');
+  return `file://${h.startsWith('/') ? '' : '/'}${h}/.deepartisan/state/uxp-bridge.token`;
 }
 async function loadToken() {
   try {

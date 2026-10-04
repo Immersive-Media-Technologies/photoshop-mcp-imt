@@ -1,9 +1,9 @@
-# PS-MCP-IMT — install on Windows (PowerShell 5.1+).
+# PS-MCP-IMT - install on Windows (PowerShell 5.1+).
 #   .\install.ps1              check -> build -> live self-test -> write client configs (asks first)
 #   .\install.ps1 -Yes         same, without questions
 #   .\install.ps1 -NoConfig    check, build and self-test only; print the config instead
 # If scripts are blocked: powershell -ExecutionPolicy Bypass -File .\install.ps1
-# Not verified by Immersive Media Technologies on Windows yet (we run macOS) — reports welcome.
+# Not verified by Immersive Media Technologies on Windows yet (we run macOS) - reports welcome.
 param([switch]$Yes, [switch]$NoConfig)
 $ErrorActionPreference = 'Continue'
 $Here = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -13,7 +13,7 @@ function Warn($m) { Write-Host " warn  $m" -ForegroundColor Yellow }
 function Bad($m)  { Write-Host " FAIL  $m" -ForegroundColor Red; $script:Fail = $true }
 function Ask($q)  { if ($Yes) { return $true }; $r = Read-Host "$q [y/N]"; return ($r -eq 'y' -or $r -eq 'Y') }
 
-Write-Host "`nPS-MCP-IMT — environment check`n-----------------------------------------------"
+Write-Host "`nPS-MCP-IMT - environment check`n-----------------------------------------------"
 $PsExe = $null
 if ($env:PHOTOSHOP_PATH -and (Test-Path $env:PHOTOSHOP_PATH)) { $PsExe = $env:PHOTOSHOP_PATH }
 else {
@@ -26,8 +26,8 @@ if ($PsExe) { Ok "Photoshop: $PsExe" } else { Bad "Photoshop 2024-2026 not found
 $NodeBin = (Get-Command node -ErrorAction SilentlyContinue).Source
 if ($NodeBin) {
   $major = [int]((& $NodeBin -v) -replace '^v(\d+).*', '$1')
-  if ($major -ge 18) { Ok "Node $(& $NodeBin -v) — $NodeBin" } else { Bad "Node.js >= 18 required (found $(& $NodeBin -v))" }
-} else { Bad "Node.js >= 18 not found — install from https://nodejs.org or use the Claude Desktop extension (.mcpb), which needs no Node" }
+  if ($major -ge 18) { Ok "Node $(& $NodeBin -v) - $NodeBin" } else { Bad "Node.js >= 18 required (found $(& $NodeBin -v))" }
+} else { Bad "Node.js >= 18 not found - install from https://nodejs.org or use the Claude Desktop extension (.mcpb), which needs no Node" }
 if ($Fail) { Write-Host "`nStopped." -ForegroundColor Red; exit 1 }
 
 Write-Host "`nBuild`n-----------------------------------------------"
@@ -41,14 +41,14 @@ if (Test-Path 'dist\uxp\deepartisan-ps-bridge.ccx') { Ok 'UXP plugin packed: dis
 
 Write-Host "`nLive check against Photoshop`n-----------------------------------------------"
 if (-not (Get-Process -Name 'Photoshop' -ErrorAction SilentlyContinue)) {
-  Warn 'Photoshop is not running — skipping the live check (start it and run .\install.ps1 again)'
+  Warn 'Photoshop is not running - skipping the live check (start it and run .\install.ps1 again)'
 } else {
   $env:PS_MCP_UXP = '1'
   $out = & $NodeBin "$Here\tools\selftest.mjs" 2>$null | Out-String
   if ($out -match '"ok":\s*true') {
     $v = [regex]::Match($out, '"version":\s*"([^"]*)"').Groups[1].Value
     Ok "Photoshop answers: $v"
-    if ($out -match '"uxp":\s*"ok"') { Ok 'UXP bridge: plugin is polling' } else { Warn 'UXP bridge: plugin not seen (optional — README -> The UXP bridge)' }
+    if ($out -match '"uxp":\s*"ok"') { Ok 'UXP bridge: plugin is polling' } else { Warn 'UXP bridge: plugin not seen (optional - README -> The UXP bridge)' }
   } else { Bad 'Photoshop did not answer'; Write-Host $out }
 }
 

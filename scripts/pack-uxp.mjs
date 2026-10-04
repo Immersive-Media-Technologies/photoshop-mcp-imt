@@ -18,5 +18,12 @@ const manifest = JSON.parse(readFileSync(join(SRC, 'manifest.json'), 'utf8'));
 mkdirSync(OUT_DIR, { recursive: true });
 rmSync(OUT, { force: true });
 // .ccx = zip с manifest.json в корне (без папки-обёртки)
-execFileSync('zip', ['-q', '-r', '-X', OUT, 'manifest.json', 'index.html', 'main.js'], { cwd: SRC, stdio: 'inherit' });
+const FILES = ['manifest.json', 'index.html', 'main.js'];
+if (process.platform === 'win32') {
+  // Windows has no `zip`; its bsdtar (System32\tar.exe, Windows 10+) writes zip archives.
+  const tar = join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'tar.exe');
+  execFileSync(tar, ['--format', 'zip', '-cf', OUT, ...FILES], { cwd: SRC, stdio: 'inherit' });
+} else {
+  execFileSync('zip', ['-q', '-r', '-X', OUT, ...FILES], { cwd: SRC, stdio: 'inherit' });
+}
 console.log(`uxp: ${manifest.id} ${manifest.version} → ${OUT}`);
