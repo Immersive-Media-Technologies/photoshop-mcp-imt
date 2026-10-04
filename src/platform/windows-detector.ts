@@ -137,8 +137,11 @@ export class WindowsDetector {
 
     const paths: string[] = [];
     
-    // Generate paths for versions 2012-2025
-    for (let year = 2025; year >= 2012; year--) {
+    // Next year's release (Adobe ships "Photoshop N+1" in the autumn of year N)
+    // back to 2012 — same rule as the macOS detector, so new versions are found
+    // without a code change. Photoshop 2026 was invisible to the 2012–2025 list.
+    const maxYear = new Date().getFullYear() + 1;
+    for (let year = maxYear; year >= 2012; year--) {
       paths.push(
         `${programFiles}\\Adobe\\Adobe Photoshop ${year}\\Photoshop.exe`,
         `${programFilesX86}\\Adobe\\Adobe Photoshop ${year}\\Photoshop.exe`,
@@ -168,7 +171,7 @@ export class WindowsDetector {
 
       await access(cleanPath, constants.F_OK);
       
-      const version = this.extractVersionFromPath(cleanPath);
+      const version = (await this.extractVersionFromExe(cleanPath)) ?? this.extractVersionFromPath(cleanPath);
       
       this.logger.info(`Found Photoshop at: ${cleanPath}`);
       
@@ -177,6 +180,22 @@ export class WindowsDetector {
         path: cleanPath,
         isRunning: await this.checkIfRunning(),
       };
+    } catch {
+      return null;
+    }
+  }
+
+  /** Real product version (e.g. 27.10.0) from the executable's version resource;
+   *  the path only carries the marketing year ("2026"). */
+  private async extractVersionFromExe(exePath: string): Promise<string | null> {
+    try {
+      const ps = `(Get-Item -LiteralPath '${exePath.replace(/'/g, "''")}').VersionInfo.ProductVersion`;
+      const { stdout } = await execAsync(
+        `powershell -NoProfile -NonInteractive -Command "${ps.replace(/"/g, '\\"')}"`,
+        { timeout: 10_000 }
+      );
+      const v = stdout.trim().match(/^\d+(\.\d+){1,3}/)?.[0];
+      return v ?? null;
     } catch {
       return null;
     }

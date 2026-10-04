@@ -44,6 +44,9 @@ describe('Windows cscript bridge encoding', () => {
     expect(script).toContain(`Environment("PROCESS")("${WINDOWS_RESULT_ENV}")`);
     expect(script).toContain('CreateTextFile(outFile, True, True)');
     expect(script).toContain('Err.Clear');
+    // transient COM "General Photoshop error" is retried, bounded by PSMCP_BUSY_RETRY_MS
+    expect(script).toContain('General Photoshop error');
+    expect(script).toContain('Environment("PROCESS")("PSMCP_BUSY_RETRY_MS")');
     expect(script).toContain('Replace(jsxPath, "\\", "\\\\")');
     expect(script).toContain('Replace(jsxForJs, "\'", "\\\'")');
     expect(script).not.toContain('WScript.Echo result');

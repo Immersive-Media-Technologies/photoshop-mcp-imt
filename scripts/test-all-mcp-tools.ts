@@ -4,8 +4,8 @@
  */
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import { execSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
+import { crc32, deflateSync } from 'node:zlib';
 import { homedir, tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -145,10 +145,34 @@ class ToolTestRunner {
   }
 }
 
+// A 64×64 solid-red PNG written with Node alone (the former python3 one-liner
+// does not exist on a stock Windows machine).
 function writeTestPng(path: string): void {
-  execSync(
-    `python3 -c "import struct,zlib,binascii; w=h=64; rows=b''.join(b'\\x00'+b'\\xff\\x00\\x00'*w for _ in range(h)); comp=zlib.compress(rows,9); crc=lambda t,d: struct.pack('>I',binascii.crc32(t+d)&0xffffffff); ch=lambda t,d: struct.pack('>I',len(d))+t+d+crc(t,d); png=b'\\x89PNG\\r\\n\\x1a\\n'+ch(b'IHDR',struct.pack('>IIBBBBB',w,h,8,2,0,0,0))+ch(b'IDAT',comp)+ch(b'IEND',b''); open('${path}','wb').write(png)"`,
-    { stdio: 'ignore' }
+  const w = 64;
+  const h = 64;
+  const row = Buffer.concat([Buffer.from([0]), Buffer.alloc(w * 3, Buffer.from([0xff, 0, 0]))]);
+  const raw = Buffer.concat(Array.from({ length: h }, () => row));
+  const chunk = (type: string, data: Buffer): Buffer => {
+    const t = Buffer.from(type, 'ascii');
+    const len = Buffer.alloc(4);
+    len.writeUInt32BE(data.length);
+    const crc = Buffer.alloc(4);
+    crc.writeUInt32BE(crc32(Buffer.concat([t, data])));
+    return Buffer.concat([len, t, data, crc]);
+  };
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(w, 0);
+  ihdr.writeUInt32BE(h, 4);
+  ihdr[8] = 8; // bit depth
+  ihdr[9] = 2; // RGB
+  writeFileSync(
+    path,
+    Buffer.concat([
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+      chunk('IHDR', ihdr),
+      chunk('IDAT', deflateSync(raw, { level: 9 })),
+      chunk('IEND', Buffer.alloc(0)),
+    ])
   );
 }
 
@@ -985,7 +1009,7 @@ async function main(): Promise<void> {
     ['ps.batch_mockup_replace', { smart_object_layer_name: 'Screen', assets_dir: assetsDir }],
     ['ps.organize_layers', { auto_group: 'true', preserve: 'true' }],
     ['ps.gradient_fade', { direction: 'bottom_to_top' }],
-    ['ps.sky_blend', { sky_image_path: '/tmp/photoshop-mcp-test.png', horizon_pct: '45' }],
+    ['ps.sky_blend', { sky_image_path: testPng, horizon_pct: '45' }],
     ['ps.dodge_burn', { blend_mode: 'overlay' }],
     ['ps.remove_distraction', { feather_px: '1' }],
     ['ps.split_carousel', { slides: '3' }],

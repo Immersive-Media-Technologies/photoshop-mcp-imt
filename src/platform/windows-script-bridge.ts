@@ -61,7 +61,24 @@ End If
 Err.Clear
 jsxForJs = Replace(jsxPath, "\\", "\\\\")
 jsxForJs = Replace(jsxForJs, "'", "\\'")
-result = photoshopApp.DoJavaScript("$.evalFile('" & jsxForJs & "')")
+' Photoshop's COM server answers "General Photoshop error occurred" while it is
+' still digesting the previous command (seen on Windows 11 with back-to-back
+' calls: three reads in a row failed in ~225 ms each). It is transient: wait a
+' little and retry, bounded by PSMCP_BUSY_RETRY_MS (default 2 s). A real script
+' error is reported by the JSX itself and does not raise here.
+Dim busyBudget, busyWaited
+busyBudget = CLng(shell.Environment("PROCESS")("PSMCP_BUSY_RETRY_MS"))
+If busyBudget <= 0 Then busyBudget = 2000
+busyWaited = 0
+Do
+    Err.Clear
+    result = photoshopApp.DoJavaScript("$.evalFile('" & jsxForJs & "')")
+    If Err.Number = 0 Then Exit Do
+    If InStr(1, Err.Description, "General Photoshop error", vbTextCompare) = 0 Then Exit Do
+    If busyWaited >= busyBudget Then Exit Do
+    WScript.Sleep 150
+    busyWaited = busyWaited + 150
+Loop
 
 If Err.Number <> 0 Then
     WriteResult "ERROR: " & Err.Description
