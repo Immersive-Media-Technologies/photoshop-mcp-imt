@@ -24,6 +24,8 @@ mkdirSync(RELEASE_DIR, { recursive: true });
 
 const manifest = JSON.parse(readFileSync(join(ROOT, 'mcpb', 'manifest.json'), 'utf8'));
 manifest.version = pkg.version;
+// Claude Desktop shows display_name but not version — the version goes into the name.
+if (!manifest.display_name.includes(pkg.version)) manifest.display_name = `${manifest.display_name} · v${pkg.version}`;
 writeFileSync(join(STAGING, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
 copyFileSync(join(ROOT, 'mcpb', 'icon.png'), join(STAGING, 'icon.png'));
 

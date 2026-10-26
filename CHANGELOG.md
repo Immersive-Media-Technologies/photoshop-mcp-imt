@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Versions 1.x below are the upstream history of
 [alisaitteke/photoshop-mcp](https://github.com/alisaitteke/photoshop-mcp), kept as received.
 
+## [Unreleased]
+
+### Changed
+
+- **The Claude Desktop extension name carries the version** («PS-MCP-IMT — Photoshop for AI agents · v0.4.6»):
+  Claude Desktop does not show the manifest `version`. `build-mcpb.mjs` appends it at pack time;
+  `mcpb/manifest.json` keeps the bare name. Hosts that derive tool ids from the extension name see new ids with
+  each version.
+
 ## [0.4.6] - 2026-10-04
 
 Windows verified: Windows 11 (ARM, Parallels) with Photoshop 2026 — live sweep of every tool
