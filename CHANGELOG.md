@@ -17,6 +17,7 @@ Versions 1.x below are the upstream history of
 
 ### Changed
 
+- **Product name Photoshop-MCP-IMT** (was PS-MCP-IMT) in the README, `.mcpb`, MCP Registry title, NOTICE, skill, installers and messages — the Adobe program name is spelled out so search finds it. The UXP panel plugin is now «Photoshop-MCP-IMT Bridge» 1.2.1 (same id `llc.imt.ps-mcp-bridge`, same token; reinstall the `.ccx` from this release to see the new name).
 - The server introduces itself to clients as `photoshop-mcp-imt` (was `photoshop-mcp`, the upstream name) — the same pattern as the npm package and the other IMT servers.
 - The MCP Registry entry lists the npm package `@immersive-media-technologies/photoshop-mcp-imt` next to the `.mcpb`.
 

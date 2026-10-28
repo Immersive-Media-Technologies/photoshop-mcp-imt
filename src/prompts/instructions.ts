@@ -205,7 +205,7 @@ Guide prompts (MCP prompts/get)
 
 /** Shown with PS_MCP_FACADE=1 in front of the upstream guidance: the facade tools and the skill. */
 export const FACADE_INSTRUCTIONS = `
-PS-MCP-IMT facade (PS_MCP_FACADE=1)
+Photoshop-MCP-IMT facade (PS_MCP_FACADE=1)
 ===================================
 - The tools you see are the facade: ps_catalog, ps_do(operation, args), ps_batch, ps_get_state, ps_get_layers,
   ps_save_document, ps_export_frame, ps_recipe, ps_skill (+ ps_execute_script / ps_uxp when enabled). Every

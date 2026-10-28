@@ -2,7 +2,7 @@
 
 ← Back to [README](../README.md)
 
-PS-MCP-IMT is a local-first bridge between an MCP host (Claude Desktop, Cursor, Claude Code, any
+Photoshop-MCP-IMT is a local-first bridge between an MCP host (Claude Desktop, Cursor, Claude Code, any
 MCP client) and a running Adobe Photoshop. Everything runs on the user's machine; the server
 sends nothing anywhere.
 
@@ -15,7 +15,7 @@ PhotoshopMCPServer (Node.js)  ── facade: ps_catalog / ps_do / ps_batch … (
   │ ExtendScript                         │ HTTP poll 127.0.0.1:38452 (PS_MCP_UXP=1, shared-secret token)
   │ osascript (macOS) / COM (Windows)    │
   ▼                                      ▼
-Adobe Photoshop  ◄───────────  UXP panel plugin «PS-MCP-IMT Bridge» (core.executeAsModal)
+Adobe Photoshop  ◄───────────  UXP panel plugin «Photoshop-MCP-IMT Bridge» (core.executeAsModal)
 ```
 
 | Layer                  | Responsibility                                                                                                                                           | Where                                                                           |

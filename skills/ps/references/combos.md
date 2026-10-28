@@ -1,6 +1,6 @@
 # Recipes that combine tools
 
-[S] = by script through PS-MCP-IMT, [U] = UI step (SKILL.md §5), [¢] = spends credits. Safety net and verification: SKILL.md §2.
+[S] = by script through Photoshop-MCP-IMT, [U] = UI step (SKILL.md §5), [¢] = spends credits. Safety net and verification: SKILL.md §2.
 Feature details live in the reference named in each step.
 
 ## 1. Replace an object with a partner-model fill

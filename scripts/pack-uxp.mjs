@@ -1,7 +1,7 @@
 /**
  * Packs the UXP bridge plugin into a .ccx (a zip of the uxp-plugin/ folder).
  * The user installs it by double-clicking dist/uxp/ps-mcp-imt-bridge.ccx →
- * Creative Cloud installs the plugin into Photoshop (Plugins → PS-MCP-IMT Bridge).
+ * Creative Cloud installs the plugin into Photoshop (Plugins → Photoshop-MCP-IMT Bridge).
  * Run: node scripts/pack-uxp.mjs
  */
 import { execFileSync } from 'node:child_process';

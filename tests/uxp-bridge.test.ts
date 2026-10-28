@@ -164,9 +164,9 @@ describe('bridge identity (server and plugin agree)', () => {
 
   it('plugin id, name and package', () => {
     expect(manifest.id).toBe('llc.imt.ps-mcp-bridge');
-    expect(manifest.name).toBe('PS-MCP-IMT Bridge');
-    expect(manifest.entrypoints[0].label.default).toBe('PS-MCP-IMT Bridge');
-    expect(manifest.version).toBe('1.2.0');
+    expect(manifest.name).toBe('Photoshop-MCP-IMT Bridge');
+    expect(manifest.entrypoints[0].label.default).toBe('Photoshop-MCP-IMT Bridge');
+    expect(manifest.version).toBe('1.2.1');
     expect(pack).toContain("'ps-mcp-imt-bridge.ccx'");
   });
 });

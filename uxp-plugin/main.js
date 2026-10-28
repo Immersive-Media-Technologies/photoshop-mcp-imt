@@ -1,5 +1,5 @@
 /**
- * PS-MCP-IMT Bridge: Photoshop UXP bridge (backup transport for ps-mcp, 2026-09-29).
+ * Photoshop-MCP-IMT Bridge: Photoshop UXP bridge (backup transport for ps-mcp, 2026-09-29).
  *
  * The panel polls the local ps-mcp HTTP server (127.0.0.1:38452, only with
  * PS_MCP_UXP=1) and runs commands inside Photoshop through the UXP API:
@@ -19,22 +19,22 @@ const BRIDGE_BASE = `http://127.0.0.1:${BRIDGE_PORT}`;
 // Panel text in the Photoshop UI language (host.uiLocale, e.g. "ru_RU"); English otherwise.
 const STRINGS = {
   en: {
-    starting: 'PS-MCP-IMT: starting…',
+    starting: 'Photoshop-MCP-IMT: starting…',
     hint: 'Backup transport for ps-mcp (UXP). You can close this panel; the bridge keeps running.',
-    noToken: 'PS-MCP-IMT: no bridge token yet; ps-mcp has not started the bridge (waiting)',
-    tokenRejected: 'PS-MCP-IMT: token rejected, reading it again',
-    idle: 'PS-MCP-IMT: connected to ps-mcp, no commands',
-    serverDown: 'PS-MCP-IMT: ps-mcp is not running (waiting)',
-    error: 'PS-MCP-IMT: error: ',
+    noToken: 'Photoshop-MCP-IMT: no bridge token yet; ps-mcp has not started the bridge (waiting)',
+    tokenRejected: 'Photoshop-MCP-IMT: token rejected, reading it again',
+    idle: 'Photoshop-MCP-IMT: connected to ps-mcp, no commands',
+    serverDown: 'Photoshop-MCP-IMT: ps-mcp is not running (waiting)',
+    error: 'Photoshop-MCP-IMT: error: ',
   },
   ru: {
-    starting: 'PS-MCP-IMT: запуск…',
+    starting: 'Photoshop-MCP-IMT: запуск…',
     hint: 'Запасной транспорт ps-mcp (UXP). Панель можно закрыть — мост продолжает работать.',
-    noToken: 'PS-MCP-IMT: нет токена моста — ps-mcp с мостом ещё не запускался (ждём)',
-    tokenRejected: 'PS-MCP-IMT: токен не принят — перечитываю',
-    idle: 'PS-MCP-IMT: связь с ps-mcp есть, команд нет',
-    serverDown: 'PS-MCP-IMT: ps-mcp не запущен (ждём)',
-    error: 'PS-MCP-IMT: ошибка — ',
+    noToken: 'Photoshop-MCP-IMT: нет токена моста — ps-mcp с мостом ещё не запускался (ждём)',
+    tokenRejected: 'Photoshop-MCP-IMT: токен не принят — перечитываю',
+    idle: 'Photoshop-MCP-IMT: связь с ps-mcp есть, команд нет',
+    serverDown: 'Photoshop-MCP-IMT: ps-mcp не запущен (ждём)',
+    error: 'Photoshop-MCP-IMT: ошибка — ',
   },
 };
 
@@ -219,7 +219,7 @@ async function handleCommand(cmd) {
         const descriptors = params.descriptors;
         if (!Array.isArray(descriptors) || descriptors.length === 0) throw new Error('descriptors: non-empty array required');
         const options = Object.assign({ synchronousExecution: true, modalBehavior: 'execute' }, params.options || {});
-        data = await modal('PS-MCP-IMT batchPlay', () => action.batchPlay(descriptors, options));
+        data = await modal('Photoshop-MCP-IMT batchPlay', () => action.batchPlay(descriptors, options));
         break;
       }
       case 'eval_js': {
@@ -228,14 +228,14 @@ async function handleCommand(cmd) {
         // An async function, so the body can `await` (closeWithoutSaving, saveAs, batchPlay …).
         const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
         const fn = new AsyncFunction('photoshop', 'uxp', 'params', params.code || '');
-        data = await modal('PS-MCP-IMT script', () => fn(photoshop, require('uxp'), params.args || {}));
+        data = await modal('Photoshop-MCP-IMT script', () => fn(photoshop, require('uxp'), params.args || {}));
         break;
       }
       case 'export_png': {
         const d = app.activeDocument;
         if (!d) throw new Error('no active document');
         const entry = await fileEntry(params.path);
-        await modal('PS-MCP-IMT export', () => d.saveAs.png(entry, { compression: 6 }, true));
+        await modal('Photoshop-MCP-IMT export', () => d.saveAs.png(entry, { compression: 6 }, true));
         data = { path: params.path };
         break;
       }
@@ -244,16 +244,16 @@ async function handleCommand(cmd) {
         if (!d) throw new Error('no active document');
         if (params.path) {
           const entry = await fileEntry(params.path);
-          await modal('PS-MCP-IMT save', () => d.saveAs.psd(entry, {}, true));
+          await modal('Photoshop-MCP-IMT save', () => d.saveAs.psd(entry, {}, true));
         } else {
-          await modal('PS-MCP-IMT save', () => d.save());
+          await modal('Photoshop-MCP-IMT save', () => d.save());
         }
         data = { path: params.path || d.path || null };
         break;
       }
       case 'neural_filter': {
         const descriptors = neuralDescriptors(params.filter, params);
-        data = await modal('PS-MCP-IMT neural filter', () =>
+        data = await modal('Photoshop-MCP-IMT neural filter', () =>
           action.batchPlay(descriptors, { synchronousExecution: true, modalBehavior: 'execute' }),
         );
         break;
@@ -290,7 +290,7 @@ async function pollOnce() {
     if (!res.ok) return;
     const cmd = await res.json();
     if (cmd && cmd.id) {
-      setStatus(`PS-MCP-IMT: ${cmd.action}`);
+      setStatus(`Photoshop-MCP-IMT: ${cmd.action}`);
       await handleCommand(cmd);
     }
   } catch (e) {

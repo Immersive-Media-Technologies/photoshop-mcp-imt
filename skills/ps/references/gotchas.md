@@ -13,7 +13,7 @@ Feature-specific limits are in each feature's reference; this file holds what ap
 - `user_cancelled` (error 8007) also comes back for some commands Photoshop refuses, not only for a user's Cancel.
 
 ## The UXP bridge (second transport)
-- The panel plugin **PS-MCP-IMT Bridge** (Plugins menu) polls the server; with `PS_MCP_UXP=1` the server opens `127.0.0.1:38452` with a
+- The panel plugin **Photoshop-MCP-IMT Bridge** (Plugins menu) polls the server; with `PS_MCP_UXP=1` the server opens `127.0.0.1:38452` with a
   shared-secret token. «Bridge reachable» = the plugin polled within the last 3 s — the panel must have been opened once per Photoshop
   launch (leave it in the workspace). While Photoshop is modal, `ps_get_state`, `ps_get_layers`, `ps_save_document` (PSD / in place)
   and `ps_export_frame` fall back to it (`via: uxp`); `PS_MCP_UXP_PREFER=1` makes it first.
@@ -57,5 +57,5 @@ Feature-specific limits are in each feature's reference; this file holds what ap
 - Non-ASCII names come back correctly (UTF-16 results); UI-language errors are classified by number as on macOS.
 - Windows on ARM: no UXP bridge (above); everything else as on x64.
 
-Sources: README and CHANGELOG of PS-MCP-IMT (1.0.0, 0.4.x); helpx «Generative AI features in Photoshop on Desktop FAQ» (2026-02-23),
+Sources: README and CHANGELOG of Photoshop-MCP-IMT (1.0.0, 0.4.x); helpx «Generative AI features in Photoshop on Desktop FAQ» (2026-02-23),
 «Partner models in Adobe products» (2026-10-23), «Generative AI model retirement»; the live sweep notes (2026-10-01 / 10-04).

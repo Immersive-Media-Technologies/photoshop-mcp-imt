@@ -1,13 +1,13 @@
 ---
 name: ps
-description: Drive Adobe Photoshop through PS-MCP-IMT (ps_get_state, ps_get_layers, ps_catalog, ps_do, ps_batch, ps_recipe, ps_export_frame, ps_uxp) and use Photoshop's AI tools — Generative Fill / Expand / Remove, Generate Image and Background, partner models (Gemini, FLUX, GPT Image), reference images, Prompt to edit, Markup, Harmonize, Generative Upscale, the Remove tool, Select Subject, Neural Filters, AI Assistant, Firefly Boards — on localized Photoshop in any UI language too. Read at the start of any Photoshop task. This file is the router; open only the reference it points to.
+description: Drive Adobe Photoshop through Photoshop-MCP-IMT (ps_get_state, ps_get_layers, ps_catalog, ps_do, ps_batch, ps_recipe, ps_export_frame, ps_uxp) and use Photoshop's AI tools — Generative Fill / Expand / Remove, Generate Image and Background, partner models (Gemini, FLUX, GPT Image), reference images, Prompt to edit, Markup, Harmonize, Generative Upscale, the Remove tool, Select Subject, Neural Filters, AI Assistant, Firefly Boards — on localized Photoshop in any UI language too. Read at the start of any Photoshop task. This file is the router; open only the reference it points to.
 revision: 1
 updated_at: 2026-10-28
 ---
 
 # Photoshop — agent skill
 
-Scope: controlling Photoshop through PS-MCP-IMT, where scripting ends, which reference to read.
+Scope: controlling Photoshop through Photoshop-MCP-IMT, where scripting ends, which reference to read.
 Facts: Photoshop 2026 (27.9–27.11), helpx pages checked 2026-10-28. Adobe MAX is 10–12 Nov 2026: model lists and credit rates will move.
 
 ## 1. Tools
@@ -23,7 +23,7 @@ Facts: Photoshop 2026 (27.9–27.11), helpx pages checked 2026-10-28. Adobe MAX 
 | `ps_export_frame {path}` | PNG of the current view to an absolute path (folder created). Read it. No file access → `ps_do get_preview {max_dimension_px}` returns a JPEG inline. |
 | `ps_save_document {path?, format?}` | Save in place or as a copy (PSD · JPEG · PNG). A copy before anything irreversible. |
 | `ps_execute_script {script}` | ES3 ExtendScript ending in `return`; only when no operation covers the step; never to redo an operation that reported `command_unavailable`. `timeout_ms` for long loops. |
-| `ps_uxp {action}` | Only with the UXP bridge (PS-MCP-IMT Bridge panel open in Photoshop): `ping` · `batchplay {descriptors}` · `script {code, args}` (UXP JS, `await` allowed) — runs inside Photoshop even while it is modal. |
+| `ps_uxp {action}` | Only with the UXP bridge (Photoshop-MCP-IMT Bridge panel open in Photoshop): `ping` · `batchplay {descriptors}` · `script {code, args}` (UXP JS, `await` allowed) — runs inside Photoshop even while it is modal. |
 | `ps_skill {doc}` | A reference of this skill by file name without `.md`, e.g. `{doc:"generative"}`. |
 
 ## 2. Order of work

@@ -1,4 +1,4 @@
-# PS-MCP-IMT - install on Windows (PowerShell 5.1+).
+# Photoshop-MCP-IMT - install on Windows (PowerShell 5.1+).
 #   .\install.ps1              check -> build -> live self-test -> write client configs (asks first)
 #   .\install.ps1 -Yes         same, without questions
 #   .\install.ps1 -NoConfig    check, build and self-test only; print the config instead
@@ -13,7 +13,7 @@ function Warn($m) { Write-Host " warn  $m" -ForegroundColor Yellow }
 function Bad($m)  { Write-Host " FAIL  $m" -ForegroundColor Red; $script:Fail = $true }
 function Ask($q)  { if ($Yes) { return $true }; $r = Read-Host "$q [y/N]"; return ($r -eq 'y' -or $r -eq 'Y') }
 
-Write-Host "`nPS-MCP-IMT - environment check`n-----------------------------------------------"
+Write-Host "`nPhotoshop-MCP-IMT - environment check`n-----------------------------------------------"
 $PsExe = $null
 if ($env:PHOTOSHOP_PATH -and (Test-Path $env:PHOTOSHOP_PATH)) { $PsExe = $env:PHOTOSHOP_PATH }
 else {

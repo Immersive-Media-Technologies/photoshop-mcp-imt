@@ -2,10 +2,10 @@
   "$schema": "https://raw.githubusercontent.com/modelcontextprotocol/mcpb/main/schemas/mcpb-manifest-v0.4.schema.json",
   "manifest_version": "0.4",
   "name": "photoshop-mcp-imt",
-  "display_name": "PS-MCP-IMT + SKILLS — Photoshop for AI agents",
+  "display_name": "Photoshop-MCP-IMT + SKILLS — Photoshop for AI agents",
   "version": "0.0.0",
   "description": "Drive a running Adobe Photoshop from Claude: documents, layers, text, masks, filters, generative tools, export.",
-  "long_description": "PS-MCP-IMT by Immersive Media Technologies. 135 Photoshop tools behind a 10-tool facade plus the Photoshop agent skill (ps_skill: generative tools, partner models and credits, retouch, selection, batch, gotchas), a UXP bridge that keeps answering while Photoshop shows a dialog, headless corner-pin, honest errors, no telemetry. Built for localized Photoshop, not just English: works on every UI language Photoshop ships. Requires Adobe Photoshop 2024+ running on this computer. Apache-2.0 license; unofficial, not affiliated with Adobe Inc.",
+  "long_description": "Photoshop-MCP-IMT by Immersive Media Technologies. 135 Photoshop tools behind a 10-tool facade plus the Photoshop agent skill (ps_skill: generative tools, partner models and credits, retouch, selection, batch, gotchas), a UXP bridge that keeps answering while Photoshop shows a dialog, headless corner-pin, honest errors, no telemetry. Built for localized Photoshop, not just English: works on every UI language Photoshop ships. Requires Adobe Photoshop 2024+ running on this computer. Apache-2.0 license; unofficial, not affiliated with Adobe Inc.",
   "author": {
     "name": "Immersive Media Technologies",
     "url": "https://github.com/Immersive-Media-Technologies"
@@ -46,7 +46,7 @@
     "uxpBridge": {
       "type": "boolean",
       "title": "UXP bridge (second transport)",
-      "description": "Start the local bridge for the PS-MCP-IMT Bridge panel plugin (127.0.0.1:38452, shared-secret token). Needs the plugin installed in Photoshop — see the README.",
+      "description": "Start the local bridge for the Photoshop-MCP-IMT Bridge panel plugin (127.0.0.1:38452, shared-secret token). Needs the plugin installed in Photoshop — see the README.",
       "default": true,
       "required": false
     },

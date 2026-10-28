@@ -1,6 +1,6 @@
-![PS-MCP-IMT + SKILLS — Photoshop for AI agents](https://raw.githubusercontent.com/Immersive-Media-Technologies/photoshop-mcp-imt/main/assets/banner.jpg)
+![Photoshop-MCP-IMT + SKILLS — Photoshop for AI agents](https://raw.githubusercontent.com/Immersive-Media-Technologies/photoshop-mcp-imt/main/assets/banner.jpg)
 
-# PS-MCP-IMT + SKILLS — Photoshop for AI agents, with two ways in
+# Photoshop-MCP-IMT + SKILLS — Photoshop for AI agents, with two ways in
 
 Let an AI agent (Claude Desktop, Cursor, ChatGPT or any MCP-compatible client) drive a running
 Adobe Photoshop: documents, layers, text, masks, selections, filters, adjustments, Smart Objects,
@@ -41,11 +41,11 @@ transport inside Photoshop (UXP)** for exactly those moments, shows the agent **
 
 **Built for localized Photoshop, not just English.** Most Photoshop MCP servers read Photoshop's
 English messages and names — on a German, Japanese or Russian install their error handling and layer
-lookups break. PS-MCP-IMT classifies errors by Photoshop's error numbers and finds the Background layer,
+lookups break. Photoshop-MCP-IMT classifies errors by Photoshop's error numbers and finds the Background layer,
 fonts and actions without localized names, so it behaves the same on every UI language Photoshop ships
 — verified live.
 
-|                         | **PS-MCP-IMT (this repo)**                                                                                                                                                                                                                                                                                    | alisaitteke/photoshop-mcp                                                                    | mikechambers/adb-mcp                                                    | dcc-mcp/dcc-mcp-photoshop                                |
+|                         | **Photoshop-MCP-IMT (this repo)**                                                                                                                                                                                                                                                                                    | alisaitteke/photoshop-mcp                                                                    | mikechambers/adb-mcp                                                    | dcc-mcp/dcc-mcp-photoshop                                |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | -------------------------------------------------------- |
 | Talks to Photoshop via  | **ExtendScript (osascript / COM) _and_ a UXP panel plugin** — chosen per call, UXP as fallback or first (`PS_MCP_UXP_PREFER=1`)                                                                                                                                                                               | ExtendScript via AppleScript / COM (we are a fork)                                           | UXP plugin → separate WebSocket proxy (Python) → MCP server             | UXP plugin → Rust broker (`adobepy`) → Python MCP server |
 | When Photoshop is modal | **`photoshop_busy` in 4 s** with an instruction for the user, 8 s hold; reads / save / export **continue through UXP** (`via: uxp`)                                                                                                                                                                           | 30 s timeout → `extendscript_timeout`, retry ping                                            | —                                                                       | UXP only, so unaffected — but no ExtendScript DOM at all |
@@ -168,7 +168,7 @@ retries the transient COM «busy» error (`PSMCP_BUSY_RETRY_MS`, default 2000 ms
 
 ### The UXP bridge (second transport)
 
-A 10-KB panel plugin, **PS-MCP-IMT Bridge** (`uxp-plugin/`, id `llc.imt.ps-mcp-bridge`),
+A 10-KB panel plugin, **Photoshop-MCP-IMT Bridge** (`uxp-plugin/`, id `llc.imt.ps-mcp-bridge`),
 lives inside Photoshop and polls the server. It runs `state`, `layers`, `batchplay`, `eval_js`,
 `export_png`, `save` and `neural_filter` inside `core.executeAsModal`, so it answers while
 ExtendScript is blocked. Install one of three ways, in this order of convenience:
@@ -181,7 +181,7 @@ ExtendScript is blocked. Install one of three ways, in this order of convenience
 3. Manual layout into Adobe's UXP plugin folder plus one entry in `PluginsInfo/v1/PS.json` —
    exact paths and the JSON line in [`docs/development.md`](docs/development.md).
 
-Then Photoshop → Plugins → **PS-MCP-IMT Bridge**; leave the panel in your workspace so the plugin
+Then Photoshop → Plugins → **Photoshop-MCP-IMT Bridge**; leave the panel in your workspace so the plugin
 loads with Photoshop. The port is protected by a shared-secret file the server creates on first
 start and the plugin reads (always at the default path, `~/.ps-mcp-imt/uxp-bridge.token`); a request
 without it gets 401, `/health` is open and reveals nothing.
@@ -252,13 +252,13 @@ Each version is described on the
 what the server does at that version and what the release added:
 
 - [v1.1.1](https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt/releases/tag/v1.1.1) · 2026-10-28 —
-  server name `photoshop-mcp-imt` like the npm package; tool counts corrected (10-tool facade with `ps_skill`); the MCP Registry entry also lists the npm package.
+  product name Photoshop-MCP-IMT (was PS-MCP-IMT); server name `photoshop-mcp-imt` like the npm package; tool counts corrected (10-tool facade with `ps_skill`); the MCP Registry entry also lists the npm package.
 - [v1.1.0](https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt/releases/tag/v1.1.0) · 2026-10-28 —
   the Photoshop agent skill (`skills/ps`, `ps_skill`): generative tools, partner models and credits, retouch,
-  selection, batch, gotchas; the product becomes PS-MCP-IMT + SKILLS.
+  selection, batch, gotchas; the product becomes Photoshop-MCP-IMT + SKILLS.
 - [v1.0.0](https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt/releases/tag/v1.0.0) · 2026-10-28 —
   every Photoshop UI language (errors by number, fonts by PostScript name, actions without localized names),
-  the PS-MCP-IMT Bridge plugin, Apache-2.0.
+  the Photoshop-MCP-IMT Bridge plugin, Apache-2.0.
 - [v0.4.5](https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt/releases/tag/v0.4.5) · 2026-10-03 —
   fix: Photoshop is detected automatically on the first call (no more «detect Photoshop first»).
 - [v0.4.4](https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt/releases/tag/v0.4.4) · 2026-10-01 —
@@ -281,7 +281,7 @@ Every change, including the upstream history 1.0.0 – 1.7.27, is in [`CHANGELOG
 - Free to use, modify and distribute, commercial use included.
 - **Attribution is required.** Every redistribution of this software or of a work derived from it
   must carry the notice from [`NOTICE`](NOTICE):
-  `PS-MCP-IMT by Immersive Media Technologies — https://github.com/Immersive-Media-Technologies`.
+  `Photoshop-MCP-IMT by Immersive Media Technologies — https://github.com/Immersive-Media-Technologies`.
 - No warranty.
 
 Third-party notices (upstream MIT code): [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md).

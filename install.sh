@@ -1,5 +1,5 @@
 #!/bin/bash
-# PS-MCP-IMT — install on macOS.
+# Photoshop-MCP-IMT — install on macOS.
 #   ./install.sh            check → build → live self-test → write client configs (asks first)
 #   ./install.sh --yes      same, without questions
 #   ./install.sh --no-config   check, build and self-test only; print the config instead
@@ -17,7 +17,7 @@ warn() { printf '%s warn %s%s\n' "$YEL" "$OFF" "$*"; }
 bad()  { printf '%s FAIL %s%s\n' "$RED" "$OFF" "$*"; FAIL=1; }
 ask()  { [ "$YES" = "1" ] && return 0; printf '%s [y/N] ' "$1"; read -r r; [ "$r" = "y" ] || [ "$r" = "Y" ]; }
 
-say ""; say "PS-MCP-IMT — environment check"; say "─────────────────────────────────────────────"
+say ""; say "Photoshop-MCP-IMT — environment check"; say "─────────────────────────────────────────────"
 if [ "$(uname -s)" != "Darwin" ]; then bad "this script is for macOS (found: $(uname -s)); on Windows run install.ps1"; else ok "macOS $(sw_vers -productVersion)"; fi
 
 PS_APP=""

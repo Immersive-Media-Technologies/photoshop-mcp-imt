@@ -1,6 +1,6 @@
 # Development
 
-Build, lint, and test PS-MCP-IMT locally.
+Build, lint, and test Photoshop-MCP-IMT locally.
 
 ← Back to [README](../README.md)
 
@@ -57,11 +57,11 @@ The panel plugin in `uxp-plugin/` is the second transport (not only Neural Filte
    **Add Plugin** → `uxp-plugin/manifest.json` → **Load** (after `manifest.json` changes: Unload,
    then Load — not Reload).
 3. Manual layout: copy `uxp-plugin/` to
-   `~/Library/Application Support/Adobe/UXP/Plugins/External/llc.imt.ps-mcp-bridge_1.2.0/`
+   `~/Library/Application Support/Adobe/UXP/Plugins/External/llc.imt.ps-mcp-bridge_1.2.1/`
    (Windows: `%APPDATA%\Adobe\UXP\Plugins\External\…`) and add the entry to
    `…/Adobe/UXP/PluginsInfo/v1/PS.json`:
-   `{"hostMinVersion":"24.0.0","name":"PS-MCP-IMT Bridge","path":"$localPlugins/External/llc.imt.ps-mcp-bridge_1.2.0","pluginId":"llc.imt.ps-mcp-bridge","status":"enabled","type":"uxp","versionString":"1.2.0"}`
-   — restart Photoshop → Plugins → PS-MCP-IMT Bridge.
+   `{"hostMinVersion":"24.0.0","name":"Photoshop-MCP-IMT Bridge","path":"$localPlugins/External/llc.imt.ps-mcp-bridge_1.2.1","pluginId":"llc.imt.ps-mcp-bridge","status":"enabled","type":"uxp","versionString":"1.2.0"}`
+   — restart Photoshop → Plugins → Photoshop-MCP-IMT Bridge.
 
 Open the panel once and leave it in your workspace: the plugin loads with the panel and keeps
 polling the server (`127.0.0.1:38452`, override with `PHOTOSHOP_UXP_BRIDGE_PORT`). Start the

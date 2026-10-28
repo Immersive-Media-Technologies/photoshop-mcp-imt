@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const ENTRY = join(ROOT, 'dist', 'index.js');
-const PRODUCT = 'PS-MCP-IMT';
+const PRODUCT = 'Photoshop-MCP-IMT';
 const SERVER_ENV = { PS_MCP_FACADE: '1', PS_MCP_UXP: '1' };
 
 const args = process.argv.slice(2);

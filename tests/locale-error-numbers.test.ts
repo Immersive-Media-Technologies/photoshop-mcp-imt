@@ -176,7 +176,7 @@ describe('UXP panel text follows the Photoshop UI language', () => {
 
   it('Russian Photoshop gets the Russian text', async () => {
     const { elements, documentElement } = loadPlugin({ uiLocale: 'ru_RU' });
-    expect(elements.status.textContent).toBe('PS-MCP-IMT: запуск…');
+    expect(elements.status.textContent).toBe('Photoshop-MCP-IMT: запуск…');
     expect(elements.hint.textContent).toMatch(/^Запасной транспорт ps-mcp/);
     expect(documentElement.lang).toBe('ru');
     await settle();
@@ -187,7 +187,7 @@ describe('UXP panel text follows the Photoshop UI language', () => {
     'any other UI language gets English: %o',
     async (host) => {
       const { elements, documentElement } = loadPlugin(host);
-      expect(elements.status.textContent).toBe('PS-MCP-IMT: starting…');
+      expect(elements.status.textContent).toBe('Photoshop-MCP-IMT: starting…');
       expect(elements.hint.textContent).toMatch(/^Backup transport for ps-mcp/);
       expect(documentElement.lang).toBe('en');
       await settle();

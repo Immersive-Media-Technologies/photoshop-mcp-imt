@@ -1,7 +1,7 @@
 {
   "id": "llc.imt.ps-mcp-bridge",
-  "name": "PS-MCP-IMT Bridge",
-  "version": "1.2.0",
+  "name": "Photoshop-MCP-IMT Bridge",
+  "version": "1.2.1",
   "manifestVersion": 5,
   "main": "index.html",
   "host": {
@@ -20,7 +20,7 @@
       "type": "panel",
       "id": "bridgePanel",
       "label": {
-        "default": "PS-MCP-IMT Bridge"
+        "default": "Photoshop-MCP-IMT Bridge"
       },
       "minimumSize": {
         "width": 240,

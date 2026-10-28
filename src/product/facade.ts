@@ -304,7 +304,7 @@ export function buildFacadeTools(
       tool: {
         name: 'ps_uxp',
         description:
-          'Photoshop UXP bridge (backup transport, runs INSIDE Photoshop via the PS-MCP-IMT Bridge plugin). ' +
+          'Photoshop UXP bridge (backup transport, runs INSIDE Photoshop via the Photoshop-MCP-IMT Bridge plugin). ' +
           'Use when ExtendScript calls fail with photoshop_busy / extendscript_timeout, or for batchPlay-only features. ' +
           'action: ping | batchplay (descriptors: action descriptor JSON array) | script (code: JS with photoshop/uxp/params in scope, use return).',
         inputSchema: {
@@ -322,8 +322,8 @@ export function buildFacadeTools(
       handler: async (args) => {
         if (!(await uxpAvailable()))
           return text(
-            'UXP bridge is not connected: the PS-MCP-IMT Bridge plugin is not running inside Photoshop. ' +
-              'Ask the user to open Plugins → PS-MCP-IMT Bridge in Photoshop (the panel must be opened once per Photoshop launch), or to install the plugin (README, section «The UXP bridge»).',
+            'UXP bridge is not connected: the Photoshop-MCP-IMT Bridge plugin is not running inside Photoshop. ' +
+              'Ask the user to open Plugins → Photoshop-MCP-IMT Bridge in Photoshop (the panel must be opened once per Photoshop launch), or to install the plugin (README, section «The UXP bridge»).',
             true,
           );
         const act = String(args.action ?? '');

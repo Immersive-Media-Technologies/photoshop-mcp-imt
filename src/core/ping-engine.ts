@@ -29,7 +29,7 @@ export async function probePhotoshopEngine(
   }
 }
 
-// PS-MCP-IMT: upstream's feedback nudge (phones home) removed — plain result.
+// Photoshop-MCP-IMT: upstream's feedback nudge (phones home) removed — plain result.
 export const PING_CONNECTED_TEXT = 'Successfully connected to Photoshop';
 export const PING_FAILED_TEXT =
   'Failed to connect to Photoshop';
