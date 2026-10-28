@@ -39,7 +39,8 @@ transport inside Photoshop (UXP)** for exactly those moments, shows the agent **
 | Undo                    | recipes = one history state (upstream); `photoshop_busy` / `command_unavailable` / `extendscript_timeout` / `scratch_disk_full` tell the agent _why_ instead of a generic timeout                                                                                                                             | recipes = one history state; `extendscript_timeout`, `scratch_disk_full`                     | —                                                                       | staged install with `--dry-run` / receipts               |
 | Install                 | **one click**: `.mcpb` for Claude Desktop (no Node needed), «Add to Cursor» button, `npx` for any other client; `install.sh` / `install.ps1` with a live self-test that write the client configs; UXP plugin as `.ccx`, UXP Developer Tools or a manual layout — every path documented with its failure modes | `npx -y @alisaitteke/photoshop-mcp`; UXP plugin for Neural Filters only                      | Python 3 + Node + UXP Developer Tools + proxy process                   | `pip install` or binaries; Rust broker                   |
 | Verified on             | **Photoshop 2026 (27.9–27.10), macOS, UXP 9.4.1, Russian and English UI** — live sweep of every tool: 193 pass / 0 fail / 11 environment skips (2026-10-01); **Windows 11 (ARM) + Photoshop 2026** — same sweep, 193 / 0 / 11 (2026-10-04)                                                                                                       | Windows + macOS                                                                              | Photoshop 26+, macOS + Windows                                          | Windows, Linux, macOS                                    |
-| License                 | **IMT Non-Commercial** for our work (attribution + link required, free for non-commercial use); upstream code stays MIT                                                                                                                                                                                       | MIT                                                                                          | MIT                                                                     | MIT                                                      |
+| UI language             | **any** — errors are classified by Photoshop's error numbers, not its localized messages; the Background layer, fonts (PostScript name) and actions without localized names; verified live in Russian, message tests in English, German, French and Japanese
+| License                 | **Apache-2.0** for our work (attribution through `NOTICE`); upstream code stays MIT                                                                                                                                                                                       | MIT                                                                                          | MIT                                                                     | MIT                                                      |
 
 Facts about other projects are from their READMEs and repository metadata on GitHub on 2026-10-01
 (adb-mcp: 716 stars, last push 2026-07-08, «proof of concept»; dcc-mcp-photoshop: v0.2.0;
@@ -230,13 +231,12 @@ Every change, including the upstream history 1.0.0 – 1.7.27, is in [`CHANGELOG
 
 ## License
 
-**[IMT Non-Commercial License](LICENSE)** — © Immersive Media Technologies.
+**[Apache License 2.0](LICENSE)** — © Immersive Media Technologies.
 
-- **Non-commercial use only.** Selling this software, offering it as or inside a paid product or
-  service, or using it in commercial client work requires a separate written license from
-  Immersive Media Technologies.
-- **Attribution is mandatory.** Every use, copy, fork or derived product must credit the creator,
-  visibly to its users: `PS-MCP-IMT by Immersive Media Technologies — https://github.com/Immersive-Media-Technologies`.
+- Free to use, modify and distribute, commercial use included.
+- **Attribution is required.** Every redistribution of this software or of a work derived from it
+  must carry the notice from [`NOTICE`](NOTICE):
+  `PS-MCP-IMT by Immersive Media Technologies — https://github.com/Immersive-Media-Technologies`.
 - No warranty.
 
-Full terms: [`LICENSE`](LICENSE). Third-party notices: [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md).
+Third-party notices (upstream MIT code): [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md).

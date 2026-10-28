@@ -3,7 +3,8 @@
 PS-MCP-IMT by Immersive Media Technologies incorporates code from the project below. It is
 distributed by its author under the MIT License, which requires that the copyright notice and
 permission notice be retained; they are reproduced here. The combined work is licensed under the
-IMT Non-Commercial License (see LICENSE).
+Apache License 2.0
+(see LICENSE).
 
 ---
 

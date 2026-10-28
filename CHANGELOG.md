@@ -9,8 +9,13 @@ Versions 1.x below are the upstream history of
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-28
+
 ### Changed
 
+- License: **Apache-2.0** (was the IMT Non-Commercial License); attribution through `NOTICE`. Upstream MIT
+  notices stay in `THIRD-PARTY-NOTICES.md`.
+- README, `.mcpb` manifest and registry description state the UI-language independence.
 - **The Claude Desktop extension name carries the version** («PS-MCP-IMT — Photoshop for AI agents · v0.4.6»):
   Claude Desktop does not show the manifest `version`. `build-mcpb.mjs` appends it at pack time;
   `mcpb/manifest.json` keeps the bare name. Hosts that derive tool ids from the extension name see new ids with

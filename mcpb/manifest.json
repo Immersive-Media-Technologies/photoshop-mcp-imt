@@ -5,7 +5,7 @@
   "display_name": "PS-MCP-IMT — Photoshop for AI agents",
   "version": "0.0.0",
   "description": "Drive a running Adobe Photoshop from Claude: documents, layers, text, masks, filters, generative tools, export.",
-  "long_description": "PS-MCP-IMT by Immersive Media Technologies. 134 Photoshop operations behind a 9-tool facade, a UXP bridge that keeps answering while Photoshop shows a dialog, headless corner-pin, honest errors, no telemetry. Requires Adobe Photoshop 2024+ running on this computer. Non-commercial license; unofficial, not affiliated with Adobe Inc.",
+  "long_description": "PS-MCP-IMT by Immersive Media Technologies. 134 Photoshop operations behind a 9-tool facade, a UXP bridge that keeps answering while Photoshop shows a dialog, headless corner-pin, honest errors, no telemetry. Works on every Photoshop UI language. Requires Adobe Photoshop 2024+ running on this computer. Apache-2.0 license; unofficial, not affiliated with Adobe Inc.",
   "author": {
     "name": "Immersive Media Technologies",
     "url": "https://github.com/Immersive-Media-Technologies"
@@ -17,7 +17,7 @@
   },
   "documentation": "https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt#readme",
   "support": "https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt/issues",
-  "license": "SEE LICENSE IN LICENSE",
+  "license": "Apache-2.0",
   "icon": "icon.png",
   "keywords": ["mcp", "photoshop", "adobe", "image-editing", "ai-agents"],
   "server": {

@@ -1,6 +1,9 @@
 PS-MCP-IMT by Immersive Media Technologies — https://github.com/Immersive-Media-Technologies
+Copyright 2026 Immersive Media Technologies
 
-Licensed under the IMT Non-Commercial License (CC BY-NC 4.0 with attribution terms, see LICENSE):
-non-commercial use only; every use, copy, fork or derived product must credit
-«PS-MCP-IMT by Immersive Media Technologies — https://github.com/Immersive-Media-Technologies»
-visibly to its users; commercial use by written permission only.
+Licensed under the Apache License, Version 2.0 (see LICENSE). Under section 4(d) of that
+license, every redistribution of this software or of a work derived from it must carry the
+attribution notice above — in a NOTICE file, in its documentation, or wherever its
+third-party notices are shown.
+
+Includes MIT-licensed code of alisaitteke/photoshop-mcp (notices in THIRD-PARTY-NOTICES.md).
