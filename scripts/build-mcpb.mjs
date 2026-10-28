@@ -31,6 +31,8 @@ copyFileSync(join(ROOT, 'mcpb', 'icon.png'), join(STAGING, 'icon.png'));
 
 cpSync(join(ROOT, 'dist'), join(SERVER_DIR, 'dist'), { recursive: true });
 cpSync(join(ROOT, 'uxp-plugin'), join(SERVER_DIR, 'uxp-plugin'), { recursive: true });
+// ps_skill reads <package root>/skills/ps; in the bundle the package root is server/.
+cpSync(join(ROOT, 'skills', 'ps'), join(SERVER_DIR, 'skills', 'ps'), { recursive: true });
 for (const f of ['LICENSE', 'NOTICE', 'THIRD-PARTY-NOTICES.md', 'README.md']) copyFileSync(join(ROOT, f), join(STAGING, f));
 
 writeFileSync(

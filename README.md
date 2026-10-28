@@ -1,10 +1,20 @@
-<p align="center"><img src="assets/banner.jpg" alt="PS-MCP-IMT — Photoshop for AI agents" width="1280"></p>
+<p align="center"><img src="assets/banner.jpg" alt="PS-MCP-IMT + SKILLS — Photoshop for AI agents" width="1280"></p>
 
-# PS-MCP-IMT — Photoshop for AI agents, with two ways in
+# PS-MCP-IMT + SKILLS — Photoshop for AI agents, with two ways in
 
-An MCP server that lets an AI agent (Claude Desktop, Cursor, ChatGPT or any MCP-compatible
-client) drive a running Adobe Photoshop: documents, layers, text, masks, selections, filters,
-adjustments, Smart Objects, artboards, generative tools, export — from natural language.
+Let an AI agent (Claude Desktop, Cursor, ChatGPT or any MCP-compatible client) drive a running
+Adobe Photoshop: documents, layers, text, masks, selections, filters, adjustments, Smart Objects,
+artboards, generative tools, export — from natural language.
+
+Two parts, made to work together:
+
+- **The MCP server** — 134 operations behind a 9-tool facade, a second transport inside Photoshop
+  for the moments a dialog blocks scripting, honest errors, no telemetry.
+- **The skill** (`skills/ps`, also served by the `ps_skill` tool, so it works in any client) — how
+  to drive Photoshop safely, where scripting ends, and how to use **Photoshop's own AI tools**:
+  Generative Fill / Expand / Remove, Generate Image and Background, partner models and their credits,
+  reference images, Prompt to edit, Harmonize, Generative Upscale, the Remove tool, AI Assistant —
+  plus the retouch, colour, selection and batch recipes that combine them, and the gotchas.
 
 Built by **[Immersive Media Technologies](https://github.com/Immersive-Media-Technologies)**. A fork of
 [alisaitteke/photoshop-mcp](https://github.com/alisaitteke/photoshop-mcp) (merged through 1.7.27)
@@ -65,6 +75,26 @@ alisaitteke/photoshop-mcp: 1.7.27 of 2026-09-30); corrections welcome.
 
 The agent combines the operations itself through `ps_do`, checking `ps_get_state` /
 `ps_get_layers` between steps and verifying with `ps_export_frame` (a PNG of the current state).
+
+## The skill
+
+`skills/ps/SKILL.md` is a short **router** the agent reads first (`ps_skill` with no arguments); it
+points to the one reference the task needs (`ps_skill {doc}`):
+
+| | |
+|---|---|
+| `SKILL.md` | the tools, the order of work (state → backup → operate → verify by values, then by frame), addressing (active document and layer, the Background layer by flag, coordinates, selections as state, localized Photoshop, modal Photoshop) and a table of **what scripts cannot do in Photoshop** with the reference for each. |
+| `references/generative.md` | Generative Fill / Expand / Remove, Generate Image and Background, the partner models (Gemini, FLUX, GPT Image) and what each costs, reference images, Prompt to edit, Markup, Enhance Detail — what is scripted and what stays in the UI. |
+| `references/retouch.md` | the Remove tool (credit-free) and Find distractions, Harmonize, Generative Upscale (Firefly, Topaz), AI Sharpen / Denoise, Neural Filters through the UXP bridge. |
+| `references/selection-masking.md` | selection and mask operations, Select Subject, the remove-background recipe, selection shape as a prompt, Quick Mask strength, Sky Replacement. |
+| `references/color-retouch.md` | frequency separation, dodge & burn, portrait enhancement, curves, LUTs and grades, layer styles, type — which recipe does what and how to hand the brush work to the user. |
+| `references/batch-export.md` | CSV → cards, watermarks, mockups, social variants, carousels, artboards, web export — inputs, outputs and where the files land. |
+| `references/ai-assistant.md` | the AI Assistant (Photoshop Beta), Firefly Boards, Actions, and the hand-over pattern for UI-only steps. |
+| `references/combos.md` | eleven jobs that combine tools: product on a new background, a billboard mockup in perspective, portrait retouch, a social set from one layout, restoring a photo, a composite that matches light. |
+| `references/gotchas.md` | modal Photoshop and `photoshop_busy`, the UXP bridge, history and what undo cannot revert, credits and the output-size cap, localized names, Windows. |
+
+Clients with their own skill support can load the folder directly (e.g. copy `skills/ps` into
+`~/.claude/skills/`).
 
 ## Install
 
@@ -163,7 +193,7 @@ malware running as you.
 
 ## Tools
 
-With `PS_MCP_FACADE=1` the agent sees nine tools:
+With `PS_MCP_FACADE=1` the agent sees ten tools:
 
 | Tool                                         | What it does                                                                                                                  |
 | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
@@ -174,6 +204,7 @@ With `PS_MCP_FACADE=1` the agent sees nine tools:
 | `ps_save_document` / `ps_export_frame(path)` | save (PSD / in place) and a PNG of the current state for the agent to look at — both with UXP fallback                        |
 | `ps_execute_script`                          | arbitrary ExtendScript (`timeout_ms` per call) — gate it in your agent policy                                                 |
 | `ps_recipe(name, args)`                      | the 16 recipes (remove background, enhance portrait, frequency separation, social variants, CSV → cards, watermark, mockup …) |
+| `ps_skill(doc?)`                             | the Photoshop agent skill: the router, or one reference by name (`generative`, `retouch`, `gotchas` …)                        |
 
 `ps_uxp(action: ping | batchplay | script)` appears when the bridge is on: batchPlay descriptors
 and JavaScript in the UXP context (`photoshop`, `uxp`, `params`, `await` allowed).
@@ -220,6 +251,12 @@ Each version is described on the
 [**Releases**](https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt/releases) page —
 what the server does at that version and what the release added:
 
+- [v1.1.0](https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt/releases/tag/v1.1.0) · 2026-10-28 —
+  the Photoshop agent skill (`skills/ps`, `ps_skill`): generative tools, partner models and credits, retouch,
+  selection, batch, gotchas; the product becomes PS-MCP-IMT + SKILLS.
+- [v1.0.0](https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt/releases/tag/v1.0.0) · 2026-10-28 —
+  every Photoshop UI language (errors by number, fonts by PostScript name, actions without localized names),
+  the PS-MCP-IMT Bridge plugin, Apache-2.0.
 - [v0.4.5](https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt/releases/tag/v0.4.5) · 2026-10-03 —
   fix: Photoshop is detected automatically on the first call (no more «detect Photoshop first»).
 - [v0.4.4](https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt/releases/tag/v0.4.4) · 2026-10-01 —

@@ -9,6 +9,7 @@
 //   ps_get_state / ps_get_layers / ps_save_document / ps_execute_script
 //   ps_export_frame(path)        — PNG of the current view
 //   ps_recipe(name, args)        — upstream's ready-made recipes
+//   ps_skill(doc?)               — the Photoshop agent skill (skills/ps), router or one reference
 // All real tools stay registered: ps_do calls them through the registry, so
 // upstream behaviour and errors do not change.
 import { mkdirSync } from 'node:fs';
@@ -17,6 +18,7 @@ import { dirname } from 'node:path';
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import type { ToolDefinition, ToolRegistry, ToolResult } from '../core/tool-registry.js';
 import { isTransportFailure, uxp, uxpAvailable, uxpMode } from '../platform/uxp-transport.js';
+import { skillToolDefinition } from './skill.js';
 
 export const FACADE_PREFIX = 'photoshop_';
 
@@ -214,7 +216,7 @@ export function buildFacadeTools(
           type: 'object',
           properties: {
             path: { type: 'string', description: 'absolute path; omit to save in place' },
-            format: { type: 'string', description: 'PSD | PNG | JPEG | TIFF … (see catalog document)' },
+            format: { type: 'string', description: 'PSD | JPEG | PNG' },
           },
         },
       },
@@ -296,6 +298,7 @@ export function buildFacadeTools(
       handler: async (args) => run('recipe_' + String(args.name ?? '').replace(/^recipe_/, ''), (args.args as Record<string, unknown>) ?? {}),
     },
   ];
+  tools.push(skillToolDefinition());
   if (uxpMode() !== 'off') {
     tools.push({
       tool: {
@@ -350,5 +353,6 @@ export const FACADE_TOOL_NAMES = new Set([
   'ps_export_frame',
   'ps_execute_script',
   'ps_recipe',
+  'ps_skill',
   'ps_uxp',
 ]);

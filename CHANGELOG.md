@@ -9,6 +9,29 @@ Versions 1.x below are the upstream history of
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-28
+
+### Added
+
+- **The Photoshop agent skill** (`skills/ps`, 9 files). `SKILL.md` is a short router: the tools, the
+  order of work (state → backup → operate → verify by values, then by frame), addressing (active
+  document and layer, the Background layer by flag, selections as state, localized Photoshop, modal
+  Photoshop) and a table of **what scripts cannot do in Photoshop** with the reference to read. Eight
+  references: generative (Fill / Expand / Remove, Generate Image and Background, partner models and
+  credits, reference images, Prompt to edit, Markup), retouch (Remove tool, Harmonize, Generative
+  Upscale, AI Sharpen / Denoise, Neural Filters), selection and masking, colour and retouch recipes,
+  batch and export, AI Assistant and Firefly Boards, combos, gotchas. Facts checked on Adobe's help
+  pages on 2026-10-28; community tips are marked as such.
+- **`ps_skill {doc?}`** serves the skill from the server (router without `doc`, one reference by name),
+  so Claude Desktop, Cursor and the ChatGPT gateway get it without loading skill folders. Shipped in the
+  `.mcpb` and the npm package. With `PS_MCP_FACADE=1` the server instructions tell the client to read
+  it first.
+
+### Changed
+
+- The product is **PS-MCP-IMT + SKILLS**; descriptions and the registry entry say so.
+- `ps_save_document` lists the formats the operation accepts (PSD, JPEG, PNG).
+
 ## [1.0.0] - 2026-10-28
 
 ### Changed

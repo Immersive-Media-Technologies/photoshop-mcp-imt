@@ -1,3 +1,5 @@
+import { facadeEnabled } from '../product/facade.js';
+
 /**
  * Server-level guidance for host LLMs (Cursor, Claude Desktop, standalone UI).
  * Advertised on MCP `initialize` via ServerOptions.instructions.
@@ -201,6 +203,19 @@ Guide prompts (MCP prompts/get)
   \`ps.generative_fill\`, \`ps.generative_remove\`, \`ps.generative_expand\` — Firefly workflows
 `.trim();
 
+/** Shown with PS_MCP_FACADE=1 in front of the upstream guidance: the facade tools and the skill. */
+export const FACADE_INSTRUCTIONS = `
+PS-MCP-IMT facade (PS_MCP_FACADE=1)
+===================================
+- The tools you see are the facade: ps_catalog, ps_do(operation, args), ps_batch, ps_get_state, ps_get_layers,
+  ps_save_document, ps_export_frame, ps_recipe, ps_skill (+ ps_execute_script / ps_uxp when enabled). Every
+  \`photoshop_<op>\` named below is reached as ps_do {operation: "<op>"}.
+- Start any Photoshop task beyond a single read or edit with ps_skill (no doc): the router names the order of
+  work, what scripts cannot do in Photoshop and which reference to read; ps_skill {doc} serves that reference.
+- Works on every Photoshop UI language: errors are classified by error number, names you pass are matched
+  without their localized form where the API allows; play_action needs the action set's name as the UI shows it.
+`;
+
 export function buildPhotoshopInstructions(): string {
-  return PHOTOSHOP_MCP_INSTRUCTIONS;
+  return facadeEnabled() ? FACADE_INSTRUCTIONS + PHOTOSHOP_MCP_INSTRUCTIONS : PHOTOSHOP_MCP_INSTRUCTIONS;
 }
