@@ -1,0 +1,62 @@
+name: Publish to MCP Registry
+
+# Lists the server in the official MCP Registry (registry.modelcontextprotocol.io) from the .mcpb
+# attached to a GitHub release. Runs on every published release and by hand (latest release).
+# server.json is the template: version, MCPB URL and SHA-256 are filled in from the release here,
+# so a release needs no manual edit of server.json. Auth: GitHub OIDC — the registry grants the
+# io.github.<owner>/ namespace to workflows of repositories that owner holds; no secrets.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to publish (empty = latest release)
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Fill server.json from the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_IN: ${{ github.event.release.tag_name || inputs.tag }}
+        run: |
+          set -euo pipefail
+          TAG="${TAG_IN:-}"
+          [ -n "$TAG" ] || TAG=$(gh release view -R "$GITHUB_REPOSITORY" --json tagName -q .tagName)
+          VER="${TAG#v}"
+          NAME="${GITHUB_REPOSITORY#*/}"
+          ASSET="$NAME-$VER.mcpb"
+          for i in 1 2 3 4 5 6; do
+            gh release download "$TAG" -R "$GITHUB_REPOSITORY" -p "$ASSET" -D "$RUNNER_TEMP" --clobber && break
+            echo "asset $ASSET not there yet — retry $i"; sleep 20
+          done
+          SHA=$(sha256sum "$RUNNER_TEMP/$ASSET" | cut -d' ' -f1)
+          URL="https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/$ASSET"
+          jq --arg v "$VER" --arg u "$URL" --arg s "$SHA" \
+            '.version = $v | .packages |= map(if .registryType == "mcpb" then .identifier = $u | .fileSha256 = $s else . end)' \
+            server.json > "$RUNNER_TEMP/server.json"
+          mv "$RUNNER_TEMP/server.json" server.json
+          cat server.json
+
+      - name: Install mcp-publisher
+        run: curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/download/v1.8.6/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher
+
+      - name: Validate
+        run: ./mcp-publisher validate
+
+      - name: Authenticate (GitHub OIDC)
+        run: ./mcp-publisher login github-oidc
+
+      - name: Publish
+        run: ./mcp-publisher publish

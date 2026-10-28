@@ -1,0 +1,31 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.Immersive-Media-Technologies/photoshop-mcp-imt",
+  "title": "PS-MCP-IMT — Photoshop for AI agents",
+  "description": "Adobe Photoshop for AI agents: 134 tools behind a 9-tool facade, UXP bridge that works when modal",
+  "repository": {
+    "url": "https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt",
+    "source": "github"
+  },
+  "websiteUrl": "https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt#readme",
+  "version": "0.4.6",
+  "icons": [
+    {
+      "src": "https://raw.githubusercontent.com/Immersive-Media-Technologies/photoshop-mcp-imt/main/mcpb/icon.png",
+      "mimeType": "image/png",
+      "sizes": [
+        "512x512"
+      ]
+    }
+  ],
+  "packages": [
+    {
+      "registryType": "mcpb",
+      "identifier": "https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt/releases/download/v0.4.6/photoshop-mcp-imt-0.4.6.mcpb",
+      "fileSha256": "bd2b89a185e45171c8ee592d94c20bb112eec5b0c024e74a65e53e907b4b5eb0",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}
