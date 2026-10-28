@@ -1,4 +1,4 @@
-<p align="center"><img src="assets/banner.jpg" alt="PS-MCP-IMT + SKILLS — Photoshop for AI agents" width="1280"></p>
+![PS-MCP-IMT + SKILLS — Photoshop for AI agents](https://raw.githubusercontent.com/Immersive-Media-Technologies/photoshop-mcp-imt/main/assets/banner.jpg)
 
 # PS-MCP-IMT + SKILLS — Photoshop for AI agents, with two ways in
 
