@@ -73,7 +73,7 @@ export class PhotoshopMCPServer {
 
     this.server = new Server(
       {
-        name: 'photoshop-mcp',
+        name: 'photoshop-mcp-imt',
         version: options.serverVersion,
       },
       {

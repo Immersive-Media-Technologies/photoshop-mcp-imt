@@ -1,6 +1,6 @@
 # Available Tools
 
-**134 tools registered** — 109 atomic `photoshop_*` tools (upstream's set plus this fork's `photoshop_distort_layer`), 16 recipe `photoshop_recipe_*` workflows (single undo step each) and the 9 `ps_*` facade tools; `ps_uxp` joins when the UXP bridge is on. With `PS_MCP_FACADE=1` a client sees only the 9 facade tools and reaches every other one through `ps_do` (see README). The upstream feedback-nudge tool is not part of this fork.
+**135 tools registered** — 109 atomic `photoshop_*` tools (upstream's set plus this fork's `photoshop_distort_layer`), 16 recipe `photoshop_recipe_*` workflows (single undo step each) and the 10 `ps_*` facade tools (incl. `ps_skill`); `ps_uxp` joins when the UXP bridge is on. With `PS_MCP_FACADE=1` a client sees only the 10 facade tools and reaches every other one through `ps_do` (see README). The upstream feedback-nudge tool is not part of this fork.
 
 Reference for all atomic `photoshop_*` MCP tools exposed by this server (parameters, examples, and return shapes).
 

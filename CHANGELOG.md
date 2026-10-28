@@ -9,6 +9,17 @@ Versions 1.x below are the upstream history of
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-10-28
+
+### Fixed
+
+- Tool counts in the README, `.mcpb` manifest, package description and docs: 135 tools behind a 10-tool facade (`ps_skill` joined the facade in 1.1.0; the texts still said 134 / 9).
+
+### Changed
+
+- The server introduces itself to clients as `photoshop-mcp-imt` (was `photoshop-mcp`, the upstream name) — the same pattern as the npm package and the other IMT servers.
+- The MCP Registry entry lists the npm package `@immersive-media-technologies/photoshop-mcp-imt` next to the `.mcpb`.
+
 ## [1.1.0] - 2026-10-28
 
 ### Added
@@ -116,7 +127,7 @@ Windows verified: Windows 11 (ARM, Parallels) with Photoshop 2026 — live sweep
 - Windows: `npm run build` failed on the UXP plugin step — no `zip` on Windows; the `.ccx` is
   packed with the system `tar` there.
 - Windows: the UXP plugin looked for the bridge token at `file://C:\Users\…` — now
-  `file:///C:/Users/…/.deepartisan/state/uxp-bridge.token`.
+  a proper `file:///C:/Users/…` URL of the token file.
 - Windows: the detector reported the marketing year («2026») as the version — now the product
   version from `Photoshop.exe`; Photoshop 2026 under `Program Files` was found only through the
   registry — the path list now reaches next year's release, like the macOS detector.
@@ -184,7 +195,7 @@ photoshop-mcp-imt-chatgpt` (`tools/chatgpt-gateway.mjs`, also `npm run chatgpt` 
 
 ### Fixed
 
-- **UXP bridge with several MCP clients on one machine.** Claude Desktop, Cursor and Deep Artisan
+- **UXP bridge with several MCP clients on one machine.** Claude Desktop, Cursor and other clients
   each start their own server, but the plugin polls one fixed port: the first instance owned it,
   every later one silently listened on the next port, which the plugin never polls, and answered
   «UXP bridge is not connected». Now a second instance recognises the owner on `/health` and
@@ -212,8 +223,8 @@ First public release of PS-MCP-IMT (the Immersive Media Technologies fork), base
   inside `core.executeAsModal`. When ExtendScript cannot get through (Photoshop is modal —
   `photoshop_busy`, a script timeout, an osascript error) and the plugin is alive, the read/save/
   export tools fall back to UXP (`via: uxp` in the answer); `PS_MCP_UXP_PREFER=1` makes UXP the
-  first choice. The port is protected by a shared secret (`~/.deepartisan/state/uxp-bridge.token`,
-  mode 0600, header `X-DA-Bridge-Token`, 401 without it; `/health` stays open and reveals nothing).
+  first choice. The port is protected by a shared secret (a token file,
+  mode 0600, sent in a request header; 401 without it; `/health` stays open and reveals nothing).
   `ps_uxp(action: ping | batchplay | script)` exposes batchPlay descriptors and UXP-context
   JavaScript (with `await`) to the agent. `npm run build:uxp` packs the plugin into a `.ccx`.
 - **Facade** (`src/da/facade.ts`, `PS_MCP_FACADE=1`): the client sees 9 tools — `ps_catalog`,

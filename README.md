@@ -8,7 +8,7 @@ artboards, generative tools, export — from natural language.
 
 Two parts, made to work together:
 
-- **The MCP server** — 134 operations behind a 9-tool facade, a second transport inside Photoshop
+- **The MCP server** — 135 tools behind a 10-tool facade, a second transport inside Photoshop
   for the moments a dialog blocks scripting, honest errors, no telemetry.
 - **The skill** (`skills/ps`, also served by the `ps_skill` tool, so it works in any client) — how
   to drive Photoshop safely, where scripting ends, and how to use **Photoshop's own AI tools**:
@@ -36,8 +36,8 @@ Photoshop 2026 — reports from Windows users are still welcome.
 Most Photoshop MCP servers stop at «the AI can run a script». Two things break that in daily use:
 Photoshop goes modal (a dialog, a progress bar, a tool in search mode) and every script call hangs
 until a timeout; and the agent drowns in a hundred tool definitions. This fork keeps a **second
-transport inside Photoshop (UXP)** for exactly those moments, shows the agent **9 tools** instead of
-134, and tells it the truth when something cannot be done.
+transport inside Photoshop (UXP)** for exactly those moments, shows the agent **10 tools** instead of
+135, and tells it the truth when something cannot be done.
 
 **Built for localized Photoshop, not just English.** Most Photoshop MCP servers read Photoshop's
 English messages and names — on a German, Japanese or Russian install their error handling and layer
@@ -49,7 +49,7 @@ fonts and actions without localized names, so it behaves the same on every UI la
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | -------------------------------------------------------- |
 | Talks to Photoshop via  | **ExtendScript (osascript / COM) _and_ a UXP panel plugin** — chosen per call, UXP as fallback or first (`PS_MCP_UXP_PREFER=1`)                                                                                                                                                                               | ExtendScript via AppleScript / COM (we are a fork)                                           | UXP plugin → separate WebSocket proxy (Python) → MCP server             | UXP plugin → Rust broker (`adobepy`) → Python MCP server |
 | When Photoshop is modal | **`photoshop_busy` in 4 s** with an instruction for the user, 8 s hold; reads / save / export **continue through UXP** (`via: uxp`)                                                                                                                                                                           | 30 s timeout → `extendscript_timeout`, retry ping                                            | —                                                                       | UXP only, so unaffected — but no ExtendScript DOM at all |
-| Tool surface            | **134 tools registered, 9 visible** (`ps_catalog` / `ps_do` / `ps_batch` …) — ~900 tokens of definitions per turn instead of ~25 K; every tool reachable through `ps_do`                                                                                                                                      | 118–122 tools, all visible (`photoshop_*` + 16 recipes)                                      | «a subset of functionality» per app, low-level tools (proof of concept) | 40+ typed tools in 8 skill packages                      |
+| Tool surface            | **135 tools registered, 10 visible** (`ps_catalog` / `ps_do` / `ps_batch` …) — ~900 tokens of definitions per turn instead of ~25 K; every tool reachable through `ps_do`                                                                                                                                      | 118–122 tools, all visible (`photoshop_*` + 16 recipes)                                      | «a subset of functionality» per app, low-level tools (proof of concept) | 40+ typed tools in 8 skill packages                      |
 | Headless corner-pin     | **`photoshop_distort_layer`**: four corners → custom warp solved for the homography; verified that `Trnf` + `quadrilateral` is silently ignored in Photoshop 2026 (12 combinations probed)                                                                                                                    | —                                                                                            | —                                                                       | —                                                        |
 | Telemetry               | **none** — analytics module is a no-op, feedback nudge removed, server sends nothing                                                                                                                                                                                                                          | anonymous analytics **on by default** (opt-out), product-feedback nudge via `photoshop_ping` | —                                                                       | —                                                        |
 | Undo                    | recipes = one history state (upstream); `photoshop_busy` / `command_unavailable` / `extendscript_timeout` / `scratch_disk_full` tell the agent _why_ instead of a generic timeout                                                                                                                             | recipes = one history state; `extendscript_timeout`, `scratch_disk_full`                     | —                                                                       | staged install with `--dry-run` / receipts               |
@@ -156,7 +156,7 @@ retries the transient COM «busy» error (`PSMCP_BUSY_RETRY_MS`, default 2000 ms
 
 | Variable                    | Default                                 | Meaning                                                                                             |
 | --------------------------- | --------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `PS_MCP_FACADE`             | off                                     | `1` / `true` → the client sees the 9 `ps_*` tools only; everything else through `ps_do`             |
+| `PS_MCP_FACADE`             | off                                     | `1` / `true` → the client sees the 10 `ps_*` tools only; everything else through `ps_do`             |
 | `PS_MCP_UXP`                | off                                     | `1` / `true` → start the bridge server for the UXP plugin (`127.0.0.1:38452`) and register `ps_uxp` |
 | `PS_MCP_UXP_PREFER`         | off                                     | `1` / `true` → UXP first for state / layers / save / export, ExtendScript second                    |
 | `PS_MCP_UXP_TOKEN_FILE`     | `~/.ps-mcp-imt/uxp-bridge.token`        | shared secret the plugin must send (`X-PS-MCP-Bridge-Token`); created 0600 on first start           |
@@ -209,7 +209,7 @@ With `PS_MCP_FACADE=1` the agent sees ten tools:
 `ps_uxp(action: ping | batchplay | script)` appears when the bridge is on: batchPlay descriptors
 and JavaScript in the UXP context (`photoshop`, `uxp`, `params`, `await` allowed).
 
-Behind the facade: **134 tools** — 109 atomic `photoshop_*` in 21 categories (document, layer,
+Behind the facade: **135 tools** — the 10 `ps_*` tools, 109 atomic `photoshop_*` in 21 categories (document, layer,
 image, smart_object, transform, filter, adjust, text, selection, mask, action, history, state,
 generative, neural, style, color, data, stack, export, artboard) and 16 recipes,
 each recipe one history state. Without the facade flag all of them are exposed directly, as in
@@ -251,6 +251,8 @@ Each version is described on the
 [**Releases**](https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt/releases) page —
 what the server does at that version and what the release added:
 
+- [v1.1.1](https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt/releases/tag/v1.1.1) · 2026-10-28 —
+  server name `photoshop-mcp-imt` like the npm package; tool counts corrected (10-tool facade with `ps_skill`); the MCP Registry entry also lists the npm package.
 - [v1.1.0](https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt/releases/tag/v1.1.0) · 2026-10-28 —
   the Photoshop agent skill (`skills/ps`, `ps_skill`): generative tools, partner models and credits, retouch,
   selection, batch, gotchas; the product becomes PS-MCP-IMT + SKILLS.

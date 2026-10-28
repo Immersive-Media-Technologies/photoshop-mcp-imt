@@ -93,7 +93,7 @@ _Re-run `npm run test:mcp-all` to refresh._
 | Prompt-layer smoke       | `npm run test:mcp-local`           | 16 prompt templates + core recipes                                                                           |
 | Prompt ↔ recipe parity   | `npm run verify:photoshop-prompts` | 12↔12 strict match + 4 guides                                                                                |
 
-**Tool coverage:** 134 tools registered (109 atomic `photoshop_*`, 16 recipes, 9 facade tools; `ps_uxp`
+**Tool coverage:** 135 tools registered (109 atomic `photoshop_*`, 16 recipes, 10 facade tools incl. `ps_skill`; `ps_uxp`
 with the bridge) — re-run `npm run test:mcp-all` for a fresh pass count.
 
 **Intentional skips** (environment-dependent, not regressions):
