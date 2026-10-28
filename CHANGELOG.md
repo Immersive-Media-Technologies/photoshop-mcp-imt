@@ -9,6 +9,10 @@ Versions 1.x below are the upstream history of
 
 ## [Unreleased]
 
+### Changed
+
+- README in plain Markdown — Glama and other catalogs strip raw HTML: the «Add to Cursor» button, client icons now show there too.
+
 ## [1.1.2] - 2026-10-28
 
 ### Changed
