@@ -66,6 +66,10 @@ jsxForJs = Replace(jsxForJs, "'", "\\'")
 ' calls: three reads in a row failed in ~225 ms each). It is transient: wait a
 ' little and retry, bounded by PSMCP_BUSY_RETRY_MS (default 2 s). A real script
 ' error is reported by the JSX itself and does not raise here.
+' The description is in the Photoshop UI language, so the error number decides:
+' Photoshop error 8800 reaches COM as HRESULT 0x80042260. The English text stays
+' as a fallback.
+Const PS_GENERAL_ERROR = &H80042260
 Dim busyBudget, busyWaited
 busyBudget = CLng(shell.Environment("PROCESS")("PSMCP_BUSY_RETRY_MS"))
 If busyBudget <= 0 Then busyBudget = 2000
@@ -74,14 +78,14 @@ Do
     Err.Clear
     result = photoshopApp.DoJavaScript("$.evalFile('" & jsxForJs & "')")
     If Err.Number = 0 Then Exit Do
-    If InStr(1, Err.Description, "General Photoshop error", vbTextCompare) = 0 Then Exit Do
+    If Err.Number <> PS_GENERAL_ERROR And InStr(1, Err.Description, "General Photoshop error", vbTextCompare) = 0 Then Exit Do
     If busyWaited >= busyBudget Then Exit Do
     WScript.Sleep 150
     busyWaited = busyWaited + 150
 Loop
 
 If Err.Number <> 0 Then
-    WriteResult "ERROR: " & Err.Description
+    WriteResult "ERROR: " & Err.Description & " (number: " & Err.Number & ")"
     WScript.Quit 1
 End If
 

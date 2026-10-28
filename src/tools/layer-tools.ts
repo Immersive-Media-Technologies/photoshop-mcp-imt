@@ -77,7 +77,7 @@ export function createLayerTools(connection: PhotoshopConnection): ToolDefinitio
             fontName: {
               type: 'string',
               description:
-                'Optional font display or PostScript name (resolved via app.fonts; see photoshop_list_fonts)',
+                'Optional font PostScript name (preferred, the same in every Photoshop UI language) or display name (resolved via app.fonts; see photoshop_list_fonts)',
             },
             tracking: {
               type: 'number',
@@ -345,7 +345,7 @@ async function getLayers(connection: PhotoshopConnection): Promise<ToolResult> {
     const api = await apiFactory.createAPI();
 
     const script = ExtendScriptSnippets.getLayerNames();
-    // Deep Artisan 30.09: короткий таймаут read-only запроса (см. state-tools READ_SCRIPT_TIMEOUT_MS)
+    // Deep Artisan 30.09: short timeout for a read-only request (see state-tools READ_SCRIPT_TIMEOUT_MS)
     const result = await api.executeScript(script, READ_SCRIPT_TIMEOUT_MS);
 
     return {

@@ -390,20 +390,29 @@ function __mcp_requireFilterableLayer(layer) {
 
 /**
  * Resolve a display or PostScript font name to the PostScript name required by TextItem.font.
+ * The PostScript name is the same in every Photoshop UI language; the display
+ * name can be localized (Japanese, Chinese, Korean fonts can show native names,
+ * depending on the UI language and the "Show Font Names in English" preference),
+ * so an exact PostScript match wins and the display name is a fallback.
  * @see https://theiviaxx.github.io/photoshop-docs/Photoshop/TextItem/font.html
  * @see https://theiviaxx.github.io/photoshop-docs/Photoshop/TextFont.html
  */
-const resolveFontPostScriptName = `
+export const resolveFontPostScriptName = `
 function resolveFontPostScriptName(name) {
+  var byDisplayName = null;
   for (var i = 0; i < app.fonts.length; i++) {
     var f = app.fonts[i];
     try {
-      if (f.postScriptName === name || f.name === name) {
-        return f.postScriptName;
+      var postScriptName = f.postScriptName;
+      if (postScriptName === name) {
+        return postScriptName;
+      }
+      if (byDisplayName === null && f.name === name) {
+        byDisplayName = postScriptName;
       }
     } catch (e) {}
   }
-  return null;
+  return byDisplayName;
 }
 `;
 
@@ -3144,14 +3153,91 @@ export const ExtendScriptSnippets = {
   `,
 
   /**
-   * Play an action from Actions palette
+   * Play an action from Actions palette.
+   * Set and action names are the ones the Actions panel shows. The sets that ship
+   * with Photoshop are named in its UI language ("Default Actions" only in English),
+   * so when the call fails the snippet lists what exists (Action Manager, by index)
+   * and returns invalid_arguments instead of Photoshop's localized error.
    */
   playAction: (actionName: string, actionSetName: string) => `
-    app.doAction("${jsString(actionName)}", "${jsString(actionSetName)}");
-    
-    return { 
-      action: '${actionName}',
-      set: '${actionSetName}'
+    ${helperFunctions}
+    var __actionName = ${jsStringLiteral(actionName)};
+    var __setName = ${jsStringLiteral(actionSetName)};
+
+    function __mcp_actionSetNames() {
+      var names = [];
+      for (var i = 1; i <= 1000; i++) {
+        var ref = new ActionReference();
+        ref.putIndex(cTID('ASet'), i);
+        var desc;
+        try { desc = executeActionGet(ref); } catch (eEnd) { break; }
+        names.push(desc.getString(cTID('Nm  ')));
+      }
+      return names;
+    }
+
+    function __mcp_actionNames(setIndex) {
+      var names = [];
+      var setRef = new ActionReference();
+      setRef.putIndex(cTID('ASet'), setIndex);
+      var setDesc = executeActionGet(setRef);
+      var count = setDesc.hasKey(cTID('NmbC')) ? setDesc.getInteger(cTID('NmbC')) : 0;
+      for (var j = 1; j <= count; j++) {
+        var ref = new ActionReference();
+        ref.putIndex(cTID('Actn'), j);
+        ref.putIndex(cTID('ASet'), setIndex);
+        try { names.push(executeActionGet(ref).getString(cTID('Nm  '))); } catch (eAct) {}
+      }
+      return names;
+    }
+
+    function __mcp_quoteList(names) {
+      var out = [];
+      for (var k = 0; k < names.length; k++) out.push('"' + names[k] + '"');
+      return out.join(', ');
+    }
+
+    try {
+      app.doAction(__actionName, __setName);
+    } catch (ePlay) {
+      var setNames = [];
+      try { setNames = __mcp_actionSetNames(); } catch (eSets) {}
+      var setIndex = -1;
+      for (var s = 0; s < setNames.length; s++) {
+        if (setNames[s] === __setName) { setIndex = s + 1; break; }
+      }
+      if (setNames.length > 0 && setIndex < 0) {
+        return {
+          ok: false,
+          code: 'invalid_arguments',
+          message: 'Action set "' + __setName + '" not found. Action sets in this Photoshop: ' + __mcp_quoteList(setNames) +
+            '. Set names are shown in the Photoshop UI language; pass one exactly as listed.'
+        };
+      }
+      if (setIndex > 0) {
+        var actionNames = [];
+        try { actionNames = __mcp_actionNames(setIndex); } catch (eActs) {}
+        var hasAction = false;
+        for (var a = 0; a < actionNames.length; a++) {
+          if (actionNames[a] === __actionName) { hasAction = true; break; }
+        }
+        if (actionNames.length > 0 && !hasAction) {
+          return {
+            ok: false,
+            code: 'invalid_arguments',
+            message: 'Action "' + __actionName + '" not found in set "' + __setName + '". Actions in that set: ' +
+              __mcp_quoteList(actionNames) + '. Pass one exactly as listed.'
+          };
+        }
+      }
+      // Both names exist: the action itself failed. Keep Photoshop's error and its number.
+      throw ePlay;
+    }
+
+    return {
+      ok: true,
+      action: __actionName,
+      set: __setName
     };
   `,
 

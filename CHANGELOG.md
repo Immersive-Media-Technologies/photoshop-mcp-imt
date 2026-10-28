@@ -15,6 +15,32 @@ Versions 1.x below are the upstream history of
   Claude Desktop does not show the manifest `version`. `build-mcpb.mjs` appends it at pack time;
   `mcpb/manifest.json` keeps the bare name. Hosts that derive tool ids from the extension name see new ids with
   each version.
+- **Error codes no longer depend on the Photoshop UI language.** Photoshop writes its error messages in
+  the UI language, so the English/Russian text patterns missed every other language. The envelope now
+  classifies by the error number that the ExtendScript wrapper, the recipe wrappers, the UXP bridge and the
+  Windows cscript bridge attach as «(number: N)»: 8800 and -25920 → `command_unavailable`, 8007 →
+  `user_cancelled` (new code), 48 / 1233 → `file_not_found`, ExtendScript runtime errors (2, 8, 21, 24, 25,
+  1302, 8500) → `extendscript_runtime_error`. The text patterns stay as a fallback for errors without a
+  number. The agent instructions document `command_unavailable` and `user_cancelled`.
+- `photoshop_play_action`: set and action names are localized (the built-in set is «Default Actions» only in
+  English Photoshop). When the set or the action does not exist, the tool returns `invalid_arguments` with the
+  names this Photoshop has, read through Action Manager. The names are escaped into the script.
+- Fonts: an exact PostScript name wins over a display-name match (display names can be localized, e.g. CJK
+  fonts in a Japanese UI); tool descriptions and docs recommend the PostScript name.
+- The UXP panel (Deep Artisan Bridge) shows English or Russian text by the Photoshop UI language
+  (`host.uiLocale`), English by default; it was Russian only.
+
+### Fixed
+
+- `remove_background` renamed the unlocked Background layer to «Subject» only in English Photoshop: it
+  compared names with «Background» / «Layer 0», which are «Фон» / «Слой 0» in Russian. It now renames on the
+  conversion itself.
+- Windows: the busy retry of the cscript bridge matched the English «General Photoshop error» text only;
+  it now matches the COM error number (0x80042260, Photoshop error 8800), the text stays as a fallback.
+- macOS: an AppleScript timeout on a non-English macOS was not recognized as a timeout (osascript localizes
+  «AppleEvent timed out»); errAETimeout (-1712) is matched by number now.
+- docs: the `photoshop_play_action` example used the localized «Default Actions» set name; the «Background»
+  example notes that the name is localized.
 
 ## [0.4.6] - 2026-10-04
 

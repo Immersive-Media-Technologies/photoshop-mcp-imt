@@ -65,6 +65,9 @@ Error recovery contract
   along with MCP's \`isError: true\`. When you see this, follow the
   \`suggested_next_tool\` hint instead of guessing or retrying blindly —
   except never follow \`photoshop_rasterize_layer\` for background removal.
+- \`code\` comes from Photoshop's error number when there is one, so it is the
+  same in every Photoshop UI language; \`message\` keeps Photoshop's text, which
+  is in the UI language (it may not be English).
 - Common codes you should be ready to handle without asking the user:
   - \`document_not_found\` — the \`document_id\` you passed is not open;
     call \`photoshop_list_documents\` and retry with a current id.
@@ -73,6 +76,12 @@ Error recovery contract
   - \`no_active_layer\` / \`layer_not_found\` — list layers with
     \`photoshop_get_layers\`, then act on a specific name.
   - \`selection_required\` — make a selection before reusing the failed tool.
+  - \`command_unavailable\` — Photoshop refused the command in the current
+    document state (a locked layer, a group, a single visible layer …); inspect
+    with \`photoshop_get_layers\` and change the target or the state first.
+  - \`user_cancelled\` — Photoshop reported the operation as cancelled (by the
+    user, or as its answer to some refused commands); check
+    \`photoshop_get_state\` before retrying.
   - \`extendscript_timeout\` — the JSX ran past its budget (default 30s).
     MCP abort does **not** stop Photoshop; the previous script may still be
     running. \`photoshop_ping\` runs a short script on that same queue and

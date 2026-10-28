@@ -179,7 +179,7 @@ Create a text layer. Optional typography fields avoid a follow-up `execute_scrip
 - `x` (number, optional): X position in pixels (default: 100)
 - `y` (number, optional): Y position in pixels (default: 100)
 - `fontSize` (number, optional): Font size in points (default: 24)
-- `fontName` (string, optional): Font display or PostScript name (see `photoshop_list_fonts`)
+- `fontName` (string, optional): Font PostScript name (preferred: the same in every Photoshop UI language) or display name (see `photoshop_list_fonts`)
 - `tracking` (number, optional): Character spacing in 1/1000 em (−1000 to 10000)
 - `leading` (number, optional): Line height in points
 - `auto_leading` (boolean, optional): Photoshop auto leading
@@ -334,7 +334,8 @@ Move the active layer relative to another layer.
 - `position` (string, required): ABOVE, BELOW, TOP, or BOTTOM
 
 ```javascript
-// Example: Move layer above "Background"
+// Example: Move layer above "Background". The background layer's name is localized
+// (it is "Background" only in English Photoshop): take the name from photoshop_get_layers.
 photoshop_move_layer_to_position({
   targetLayerName: "Background",
   position: "ABOVE"
@@ -614,7 +615,7 @@ List installed fonts available to Photoshop. First call may be slow (`app.fonts`
 
 **Returns:** `{ fonts: [{ name, postScriptName, family, style }], total, truncated }`
 
-Use `postScriptName` when setting fonts manually via `execute_script`; `photoshop_set_text_font` and `photoshop_create_text_layer` resolve display names automatically.
+Use `postScriptName` when setting fonts manually via `execute_script`, and prefer it everywhere: it is the same in every Photoshop UI language, while `name` and `family` can be localized (CJK fonts can show native names in a Japanese, Chinese or Korean UI). `photoshop_set_text_font` and `photoshop_create_text_layer` also resolve display names; an exact PostScript match wins.
 
 ```javascript
 // Example: Find Arial variants
@@ -622,10 +623,10 @@ photoshop_list_fonts({ query: "Arial", limit: 20 })
 ```
 
 #### `photoshop_set_text_font`
-Set font family and size for active text layer. Accepts display name (e.g. `"Arial"`) or PostScript name (e.g. `"ArialMT"`).
+Set font family and size for active text layer. Prefer the PostScript name (e.g. `"ArialMT"`), which does not depend on the UI language; a display name (e.g. `"Arial"`) also works as a fallback.
 
 **Parameters:**
-- `fontName` (string, required): Font display or PostScript name (use `photoshop_list_fonts` to discover)
+- `fontName` (string, required): Font PostScript name (preferred) or display name (use `photoshop_list_fonts` to discover)
 - `fontSize` (number, optional): Font size in points
 
 ```javascript
@@ -958,15 +959,22 @@ photoshop_get_history()
 Play a recorded action from the Actions palette.
 
 **Parameters:**
-- `actionName` (string, required): Action name
-- `actionSetName` (string, required): Action set name
+- `actionName` (string, required): Action name, exactly as the Actions panel shows it
+- `actionSetName` (string, required): Action set name, exactly as the Actions panel shows it
+
+Names follow the Photoshop UI language: the set Photoshop ships is "Default Actions" only in
+English Photoshop, and has another name in every other language. Do not hard-code it. When the set
+or the action does not exist, the tool fails with `invalid_arguments` and the message lists the
+names this Photoshop has; retry with one of them.
 
 ```javascript
-// Example: Play action
+// Example: Play an action from a set you recorded or loaded yourself
 photoshop_play_action({
   actionName: "My Action",
-  actionSetName: "Default Actions"
+  actionSetName: "My Actions"
 })
+// -> unknown set: { code: "invalid_arguments", message: 'Action set "My Actions" not found.
+//    Action sets in this Photoshop: "...", "..." ...' }
 ```
 
 #### `photoshop_execute_script`

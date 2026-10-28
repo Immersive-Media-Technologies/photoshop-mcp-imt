@@ -179,11 +179,28 @@ function __mcp_json_stringify(value) {
 }
 `;
 
+/**
+ * Recipe failure payload. Photoshop writes error messages in its UI language,
+ * so the error number (the same in every language) is appended in the format
+ * the ExtendScript wrapper uses: "message (number: N)".
+ */
+const RECIPE_ERROR_HELPER = `
+function __mcp_recipe_error(e) {
+  var message = '';
+  var number = null;
+  try { message = e.message || String(e); } catch (eMsg) { message = 'unknown'; }
+  try { number = e.number; } catch (eNum) {}
+  if (typeof number === 'number' && !isNaN(number)) message += ' (number: ' + number + ')';
+  return { ok: false, code: 'recipe_runtime_error', message: message };
+}
+`;
+
 export function wrapInSuspendHistory(historyName: string, body: string): string {
   const escapedName = jsString(historyName);
   return `
     ${RECIPE_ACTION_HELPERS}
     ${EXTENDSCRIPT_JSON_HELPER}
+    ${RECIPE_ERROR_HELPER}
     if (app.documents.length === 0) {
       throw new Error('No active document');
     }
@@ -194,7 +211,7 @@ export function wrapInSuspendHistory(historyName: string, body: string): string 
     };
     __mcp_recipe_doc.suspendHistory(
       "${escapedName}",
-      "try { __mcp_recipe_result = __mcp_recipe_fn(); } catch (eRecipe) { __mcp_recipe_result = { ok: false, code: 'recipe_runtime_error', message: eRecipe.message || String(eRecipe) }; }"
+      "try { __mcp_recipe_result = __mcp_recipe_fn(); } catch (eRecipe) { __mcp_recipe_result = __mcp_recipe_error(eRecipe); }"
     );
     if (!__mcp_recipe_result) {
       __mcp_recipe_result = { ok: false, code: 'recipe_no_result', message: 'Recipe produced no result' };
@@ -212,6 +229,7 @@ export function wrapInStandaloneScript(body: string): string {
   return `
     ${RECIPE_ACTION_HELPERS}
     ${EXTENDSCRIPT_JSON_HELPER}
+    ${RECIPE_ERROR_HELPER}
     var __mcp_recipe_result = null;
     var __mcp_recipe_fn = function() {
       ${body}
@@ -219,7 +237,7 @@ export function wrapInStandaloneScript(body: string): string {
     try {
       __mcp_recipe_result = __mcp_recipe_fn();
     } catch (eRecipe) {
-      __mcp_recipe_result = { ok: false, code: 'recipe_runtime_error', message: eRecipe.message || String(eRecipe) };
+      __mcp_recipe_result = __mcp_recipe_error(eRecipe);
     }
     if (!__mcp_recipe_result) {
       __mcp_recipe_result = { ok: false, code: 'recipe_no_result', message: 'Recipe produced no result' };

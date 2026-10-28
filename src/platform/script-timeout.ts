@@ -53,6 +53,9 @@ export function isScriptTimeoutError(message: string): boolean {
     /script timed out/i.test(message) ||
     /waiting in the execution queue/i.test(message) ||
     /appleevent timed out/i.test(message) ||
+    // errAETimeout: osascript localizes the text into the macOS language but
+    // always prints the number, e.g. "AppleEvent timed out. (-1712)".
+    /\(-1712\)/.test(message) ||
     /ETIMEDOUT/i.test(message)
   );
 }

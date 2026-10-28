@@ -31,6 +31,7 @@ export type PhotoshopErrorCode =
   // Deep Artisan 20.09
   | 'photoshop_busy'
   | 'command_unavailable'
+  | 'user_cancelled'
   | 'unknown';
 
 export interface PhotoshopErrorEnvelope {
@@ -41,20 +42,25 @@ export interface PhotoshopErrorEnvelope {
   suggested_args?: Record<string, unknown>;
 }
 
-const ERROR_PATTERNS: Array<{
-  pattern: RegExp;
+type ErrorRule = {
   code: PhotoshopErrorCode;
   suggested_next_tool?: string;
-}> = [
-  // Deep Artisan 20.09 — ПЕРВЫМИ: иначе «timed out … queue» уезжал в generative_timeout.
-  // (script_timeout 20.09 → upstream 1.7.27 extendscript_timeout + refineTimeoutEnvelope/scratch disk; код объединён.)
-  // Photoshop в модальном режиме (диалог/прогресс/инструмент в поиске): ВСЕ скрипты
-  // висят до таймаута — проба 4 с не ответила → busy (connection.ts), повторять нельзя.
+};
+
+type ErrorPattern = ErrorRule & { pattern: RegExp };
+
+/**
+ * Messages written by this server and by its own scripts. They are English in
+ * every Photoshop UI language, so they are matched right after the error
+ * number and before Photoshop's own (localized) text.
+ */
+const MCP_MESSAGE_PATTERNS: ErrorPattern[] = [
+  // Deep Artisan 20.09: matched before the generative patterns, otherwise
+  // "timed out ... queue" was classified as generative_timeout.
+  // (script_timeout 20.09 -> upstream 1.7.27 extendscript_timeout + refineTimeoutEnvelope/scratch disk; codes merged.)
+  // Photoshop is modal (a dialog, a progress bar, a tool in search mode): EVERY script
+  // waits until the timeout. The 4 s probe did not answer -> busy (connection.ts); do not retry.
   { pattern: /Photoshop busy/i, code: 'photoshop_busy' },
-  // «Команда "X" в данный момент недоступна» / "is not currently available" — состояние
-  // документа не допускает команду (один видимый слой для Merge Visible, слой заблокирован,
-  // группа, фон…) — не версия Photoshop и не MCP.
-  { pattern: /в данный момент недоступна|is not currently available|not currently available|not available at this time/i, code: 'command_unavailable', suggested_next_tool: 'photoshop_get_layers' },
   { pattern: /document_not_found/i, code: 'document_not_found', suggested_next_tool: 'photoshop_list_documents' },
   { pattern: /no active document/i, code: 'no_active_document', suggested_next_tool: 'photoshop_get_state' },
   { pattern: /no documents/i, code: 'no_active_document', suggested_next_tool: 'photoshop_get_state' },
@@ -62,11 +68,10 @@ const ERROR_PATTERNS: Array<{
   { pattern: /layer not found/i, code: 'layer_not_found', suggested_next_tool: 'photoshop_get_layers' },
   { pattern: /no base layer below|nothing to clip into/i, code: 'no_base_layer_below', suggested_next_tool: 'photoshop_get_layers' },
   { pattern: /not clipping|not a clipping mask/i, code: 'not_clipping', suggested_next_tool: 'photoshop_get_layers' },
-  { pattern: /selection/i, code: 'selection_required', suggested_next_tool: 'photoshop_get_state' },
   { pattern: /version_unsupported|not supported.*version/i, code: 'version_unsupported', suggested_next_tool: 'photoshop_get_capabilities' },
-  { pattern: /generative.*credit|quota|sign in/i, code: 'generative_credits_exhausted', suggested_next_tool: 'photoshop_get_capabilities' },
   {
-    pattern: /script execution timeout|script timed out|waiting in the execution queue|appleevent timed out|ETIMEDOUT/i,
+    // -1712 is errAETimeout: osascript prints the number in every macOS language.
+    pattern: /script execution timeout|script timed out|waiting in the execution queue|appleevent timed out|\(-1712\)|ETIMEDOUT/i,
     code: 'extendscript_timeout',
     suggested_next_tool: 'photoshop_ping',
   },
@@ -74,13 +79,96 @@ const ERROR_PATTERNS: Array<{
   { pattern: /generative.*timeout|generative.*timed out/i, code: 'generative_timeout', suggested_next_tool: 'photoshop_get_preview' },
   { pattern: /generative_no_selection|selection required for generative/i, code: 'generative_no_selection', suggested_next_tool: 'photoshop_select_rectangle' },
   { pattern: /uxp.?bridge|neural filter.*bridge/i, code: 'uxp_bridge_unavailable', suggested_next_tool: 'photoshop_get_capabilities' },
-  { pattern: /generative/i, code: 'generative_unavailable', suggested_next_tool: 'photoshop_get_capabilities' },
-  { pattern: /syntax error|error 8:/i, code: 'extendscript_runtime_error', suggested_next_tool: 'photoshop_get_state' },
   { pattern: /font_not_found/i, code: 'font_not_found', suggested_next_tool: 'photoshop_list_fonts' },
   { pattern: /not a text layer/i, code: 'not_text_layer', suggested_next_tool: 'photoshop_create_text_layer' },
-  { pattern: /file not found|does not exist/i, code: 'file_not_found' },
+];
+
+const COMMAND_UNAVAILABLE: ErrorRule = {
+  code: 'command_unavailable',
+  suggested_next_tool: 'photoshop_get_layers',
+};
+const RUNTIME_ERROR: ErrorRule = {
+  code: 'extendscript_runtime_error',
+  suggested_next_tool: 'photoshop_get_state',
+};
+const FILE_NOT_FOUND: ErrorRule = { code: 'file_not_found' };
+
+/**
+ * Photoshop writes its error messages in its UI language (about 25 of them),
+ * so message text only works for the languages a pattern was written for.
+ * The error number is the same in every language. The ExtendScript wrappers
+ * (photoshop-api.ts, recipes/_shared.ts) and the UXP bridge (uxp-plugin/main.js)
+ * append it as "(number: N)".
+ * -25010 (scratch disk full) is matched by SCRATCH_DISK_FULL_PATTERN.
+ */
+export const ERROR_NUMBER_RULES: ReadonlyMap<number, ErrorRule> = new Map<number, ErrorRule>([
+  // "User cancelled the operation": the number Adobe's own scripts test for
+  // (Presets/Scripts: Image Processor, ContactSheetII, StackSupport kUserCancelledError).
+  // Photoshop also answers some refusals with it (ContactSheetII: convertProfile with an
+  // unknown profile).
+  [8007, { code: 'user_cancelled', suggested_next_tool: 'photoshop_get_state' }],
+  // "General Photoshop error occurred ... - The command "X" is not currently available."
+  // ExtendScript reports a command Photoshop refuses in the current document state with
+  // this number (one visible layer for Merge Visible, a locked layer, a group, the
+  // background...), whatever the sub-reason: not a Photoshop version problem, not an MCP one.
+  [8800, COMMAND_UNAVAILABLE],
+  // Photoshop's own code for "The command "X" is not currently available"
+  // (the `result` of a UXP batchPlay error descriptor, action batch logs).
+  [-25920, COMMAND_UNAVAILABLE],
+  // ExtendScript "File or folder does not exist".
+  [48, FILE_NOT_FOUND],
+  // ExtendScript "Expected a reference to an existing File/Folder" (app.open on a missing path).
+  [1233, FILE_NOT_FOUND],
+  // ExtendScript core errors: "X is undefined", "Syntax error", "undefined is not an object",
+  // "X is not a function", "Expected: ;".
+  [2, RUNTIME_ERROR],
+  [8, RUNTIME_ERROR],
+  [21, RUNTIME_ERROR],
+  [24, RUNTIME_ERROR],
+  [25, RUNTIME_ERROR],
+  // Photoshop DOM: "No such element" (getByName / index out of range),
+  // "The requested property does not exist".
+  [1302, RUNTIME_ERROR],
+  [8500, RUNTIME_ERROR],
+]);
+
+/**
+ * Matched last: Photoshop's own message text (English and Russian only, a
+ * fallback for errors that arrive without a number) and broad keywords that
+ * our messages share with Photoshop's English ones.
+ */
+const LOCALIZED_MESSAGE_PATTERNS: ErrorPattern[] = [
+  // Russian «Команда "X" в данный момент недоступна» / English "is not currently available":
+  // the document state does not allow the command (see 8800 above).
+  { pattern: /в данный момент недоступна|is not currently available|not currently available|not available at this time/i, ...COMMAND_UNAVAILABLE },
+  { pattern: /selection/i, code: 'selection_required', suggested_next_tool: 'photoshop_get_state' },
+  { pattern: /generative.*credit|quota|sign in/i, code: 'generative_credits_exhausted', suggested_next_tool: 'photoshop_get_capabilities' },
+  { pattern: /generative/i, code: 'generative_unavailable', suggested_next_tool: 'photoshop_get_capabilities' },
+  { pattern: /syntax error|error 8:/i, ...RUNTIME_ERROR },
+  { pattern: /file not found|does not exist/i, ...FILE_NOT_FOUND },
   { pattern: /color mode/i, code: 'unsupported_color_mode', suggested_next_tool: 'photoshop_get_document_info' },
 ];
+
+/**
+ * Error numbers in a message: "(number: N)" from the ExtendScript wrapper and
+ * the UXP bridge, "Error N:" as ExtendScript itself prints an error.
+ */
+export function extractErrorNumbers(message: string): number[] {
+  const numbers: number[] = [];
+  for (const match of message.matchAll(/\(number:\s*(-?\d+)\)|\bError\s+(-?\d+):/gi)) {
+    numbers.push(Number(match[1] ?? match[2]));
+  }
+  return numbers;
+}
+
+function envelopeFor(message: string, rule: ErrorRule): PhotoshopErrorEnvelope {
+  return {
+    ok: false,
+    code: rule.code,
+    message,
+    ...(rule.suggested_next_tool ? { suggested_next_tool: rule.suggested_next_tool } : {}),
+  };
+}
 
 /**
  * Photoshop's minimum available hard-disk space.
@@ -127,15 +215,19 @@ export function classifyError(message: string): PhotoshopErrorEnvelope {
     return scratchDiskFullEnvelope(message);
   }
 
-  for (const { pattern, code, suggested_next_tool } of ERROR_PATTERNS) {
-    if (pattern.test(message)) {
-      return {
-        ok: false,
-        code,
-        message,
-        ...(suggested_next_tool ? { suggested_next_tool } : {}),
-      };
-    }
+  // The number first: it names the cause in every UI language, also when the
+  // message carries our own prefix ("UXP bridge: …", "Error playing action: …").
+  for (const number of extractErrorNumbers(message)) {
+    const rule = ERROR_NUMBER_RULES.get(number);
+    if (rule) return envelopeFor(message, rule);
+  }
+
+  for (const rule of MCP_MESSAGE_PATTERNS) {
+    if (rule.pattern.test(message)) return envelopeFor(message, rule);
+  }
+
+  for (const rule of LOCALIZED_MESSAGE_PATTERNS) {
+    if (rule.pattern.test(message)) return envelopeFor(message, rule);
   }
 
   return {

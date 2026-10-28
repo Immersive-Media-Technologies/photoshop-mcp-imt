@@ -63,13 +63,13 @@ async function runRemoveBackground(
     var convertedBackground = false;
     if (layer.isBackgroundLayer) {
       try {
-        var previousName = String(layer.name);
         layer.isBackgroundLayer = false;
         convertedBackground = true;
         layer = doc.activeLayer;
-        if (previousName === 'Background' || layer.name === 'Background' || layer.name === 'Layer 0') {
-          layer.name = 'Subject';
-        }
+        // A background layer always carries Photoshop's default name and the
+        // unlocked layer gets another default ("Layer 0"). Both are localized
+        // in non-English Photoshop, so rename on the conversion, not by name.
+        layer.name = 'Subject';
       } catch (eBg) {
         return { ok: false, code: 'no_active_layer', message: 'Could not unlock the Background layer.', suggested_next_tool: 'photoshop_get_state' };
       }

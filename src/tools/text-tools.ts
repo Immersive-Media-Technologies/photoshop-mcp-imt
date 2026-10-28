@@ -18,7 +18,8 @@ export function createTextTools(connection: PhotoshopConnection): ToolDefinition
         description:
           'List installed fonts available to Photoshop.\n\n' +
           'Use when: choosing a font for photoshop_create_text_layer or photoshop_set_text_font.\n' +
-          'TextItem.font requires the PostScript name — use postScriptName from results, or pass display name to set/create tools (they resolve automatically).\n\n' +
+          'TextItem.font requires the PostScript name — use postScriptName from results. It is the same in every Photoshop UI language, ' +
+          'while name/family can be localized (e.g. CJK fonts in a Japanese UI); set/create tools also accept a display name as a fallback.\n\n' +
           'Returns: fonts array ({ name, postScriptName, family, style }), total count, truncated flag.\n' +
           'First call may be slow (app.fonts.length can exceed 1000). Side effects: none.',
         inputSchema: {
@@ -45,14 +46,15 @@ export function createTextTools(connection: PhotoshopConnection): ToolDefinition
         name: 'photoshop_set_text_font',
         description:
           'Set font family and size for active text layer.\n\n' +
-          'Accepts display name (e.g. "Arial") or PostScript name (e.g. "ArialMT") — resolved via app.fonts.\n' +
+          'Prefer the PostScript name (e.g. "ArialMT"): it is the same in every Photoshop UI language. ' +
+          'A display name (e.g. "Arial") also works but can be localized; an exact PostScript match wins.\n' +
           'Use photoshop_list_fonts to discover available fonts.',
         inputSchema: {
           type: 'object',
           properties: {
             fontName: {
               type: 'string',
-              description: 'Font display or PostScript name (see photoshop_list_fonts)',
+              description: 'Font PostScript name (preferred, language-independent) or display name (see photoshop_list_fonts)',
             },
             fontSize: {
               type: 'number',
@@ -189,7 +191,7 @@ export function createTextTools(connection: PhotoshopConnection): ToolDefinition
             },
             fontName: {
               type: 'string',
-              description: 'Font display or PostScript name',
+              description: 'Font PostScript name (preferred) or display name',
             },
             fontSize: {
               type: 'number',
@@ -228,7 +230,7 @@ export function createTextTools(connection: PhotoshopConnection): ToolDefinition
                 properties: {
                   from: { type: 'number', description: 'Start index (inclusive)', minimum: 0 },
                   to: { type: 'number', description: 'End index (exclusive)' },
-                  fontName: { type: 'string', description: 'Font display or PostScript name for this span' },
+                  fontName: { type: 'string', description: 'Font PostScript name (preferred) or display name for this span' },
                   fontSize: { type: 'number', description: 'Size in points', minimum: 1 },
                   red: { type: 'number', minimum: 0, maximum: 255 },
                   green: { type: 'number', minimum: 0, maximum: 255 },

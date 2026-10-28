@@ -3,23 +3,29 @@ import { PhotoshopConnection } from '../platform/connection.js';
 import { PhotoshopAPIFactory } from '../api/photoshop-api.js';
 import { ExtendScriptSnippets } from '../api/extendscript.js';
 import { resolveScriptTimeoutMs } from '../platform/script-timeout.js';
+import { atomicFailure, parseSnippetResult } from './atomic-shared.js';
 
 export function createActionTools(connection: PhotoshopConnection): ToolDefinition[] {
   return [
     {
       tool: {
         name: 'photoshop_play_action',
-        description: 'Play a recorded action from the Actions palette',
+        description:
+          'Play a recorded action from the Actions palette.\n\n' +
+          'Names are the ones the Actions panel shows, in the Photoshop UI language: the built-in set is ' +
+          '"Default Actions" only in English Photoshop. When the set or the action does not exist, the error ' +
+          '(code invalid_arguments) lists the names this Photoshop has; retry with one of them.',
         inputSchema: {
           type: 'object',
           properties: {
             actionName: {
               type: 'string',
-              description: 'Name of the action to play',
+              description: 'Name of the action to play, exactly as the Actions panel shows it',
             },
             actionSetName: {
               type: 'string',
-              description: 'Name of the action set containing the action',
+              description:
+                'Name of the action set containing the action, exactly as the Actions panel shows it (localized for the sets Photoshop ships)',
             },
           },
           required: ['actionName', 'actionSetName'],
@@ -75,7 +81,15 @@ async function playAction(
     const api = await apiFactory.createAPI();
 
     const script = ExtendScriptSnippets.playAction(actionName, actionSetName);
-    await api.executeScript(script);
+    const result = parseSnippetResult(await api.executeScript(script));
+    if (result?.ok === false) {
+      // Unknown set or action: the message lists the names this Photoshop has.
+      return atomicFailure({
+        ok: false,
+        code: 'invalid_arguments',
+        message: typeof result.message === 'string' ? result.message : 'Action not found',
+      });
+    }
 
     return {
       content: [
