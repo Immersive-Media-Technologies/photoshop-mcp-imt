@@ -9,6 +9,12 @@ Versions 1.x below are the upstream history of
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-10-28
+
+### Changed
+
+- Descriptions (README, npm, `.mcpb`, MCP Registry, GitHub) say what sets the product apart: it works with every UI language Adobe ships, comes with a large skills library and is built for Adobe's generative features (Generative Fill, Generative Expand, Generative Upscale, text to image, Firefly and partner models, generative credits).
+
 ## [1.1.1] - 2026-10-28
 
 ### Fixed

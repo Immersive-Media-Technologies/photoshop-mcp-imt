@@ -4,8 +4,8 @@
   "name": "photoshop-mcp-imt",
   "display_name": "Photoshop-MCP-IMT + SKILLS — Photoshop for AI agents",
   "version": "0.0.0",
-  "description": "Drive a running Adobe Photoshop from Claude: documents, layers, text, masks, filters, generative tools, export.",
-  "long_description": "Photoshop-MCP-IMT by Immersive Media Technologies. 135 Photoshop tools behind a 10-tool facade plus the Photoshop agent skill (ps_skill: generative tools, partner models and credits, retouch, selection, batch, gotchas), a UXP bridge that keeps answering while Photoshop shows a dialog, headless corner-pin, honest errors, no telemetry. Built for localized Photoshop, not just English: works on every UI language Photoshop ships. Requires Adobe Photoshop 2024+ running on this computer. Apache-2.0 license; unofficial, not affiliated with Adobe Inc.",
+  "description": "Drive a running Adobe Photoshop from your AI agent — every Adobe UI language, a large skills library, built for Photoshop's generative features.",
+  "long_description": "Photoshop-MCP-IMT by Immersive Media Technologies. 135 Photoshop tools behind a 10-tool facade plus the Photoshop agent skill (ps_skill: generative tools, partner models and credits, retouch, selection, batch, gotchas), a UXP bridge that keeps answering while Photoshop shows a dialog, headless corner-pin, honest errors, no telemetry. Works with every UI language Adobe ships, comes with a large skills library and is built for Adobe's generative features (Generative Fill, Generative Expand, Generative Upscale, text to image, Firefly and partner models, generative credits). Built for localized Photoshop, not just English. Requires Adobe Photoshop 2024+ running on this computer. Apache-2.0 license; unofficial, not affiliated with Adobe Inc.",
   "author": {
     "name": "Immersive Media Technologies",
     "url": "https://github.com/Immersive-Media-Technologies"

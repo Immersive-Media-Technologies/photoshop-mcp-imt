@@ -6,6 +6,8 @@ Let an AI agent (Claude Desktop, Cursor, ChatGPT or any MCP-compatible client) d
 Adobe Photoshop: documents, layers, text, masks, selections, filters, adjustments, Smart Objects,
 artboards, generative tools, export — from natural language.
 
+**Every Adobe UI language · a large skills library · built for generative features.** Photoshop-MCP-IMT works with every UI language Adobe ships, comes with a large skills library and is built for Adobe's generative features — Generative Fill, Generative Expand, Generative Upscale, text to image, Firefly and partner models, generative credits.
+
 Two parts, made to work together:
 
 - **The MCP server** — 135 tools behind a 10-tool facade, a second transport inside Photoshop
@@ -251,6 +253,8 @@ Each version is described on the
 [**Releases**](https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt/releases) page —
 what the server does at that version and what the release added:
 
+- [v1.1.2](https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt/releases/tag/v1.1.2) · 2026-10-28 —
+  descriptions everywhere: every Adobe UI language, a large skills library, built for Adobe's generative features.
 - [v1.1.1](https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt/releases/tag/v1.1.1) · 2026-10-28 —
   product name Photoshop-MCP-IMT (was PS-MCP-IMT); server name `photoshop-mcp-imt` like the npm package; tool counts corrected (10-tool facade with `ps_skill`); the MCP Registry entry also lists the npm package.
 - [v1.1.0](https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt/releases/tag/v1.1.0) · 2026-10-28 —

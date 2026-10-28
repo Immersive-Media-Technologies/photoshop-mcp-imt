@@ -2,13 +2,13 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.Immersive-Media-Technologies/photoshop-mcp-imt",
   "title": "Photoshop-MCP-IMT + SKILLS — Photoshop for AI agents",
-  "description": "Adobe Photoshop for AI agents on any UI language: 10-tool facade, UXP bridge when modal, AI skill",
+  "description": "Photoshop for AI agents: every Adobe UI language, large skills library, generative tools first",
   "repository": {
     "url": "https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt",
     "source": "github"
   },
   "websiteUrl": "https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt#readme",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "icons": [
     {
       "src": "https://raw.githubusercontent.com/Immersive-Media-Technologies/photoshop-mcp-imt/main/mcpb/icon.png",
@@ -23,15 +23,15 @@
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "@immersive-media-technologies/photoshop-mcp-imt",
-      "version": "1.1.1",
+      "version": "1.1.2",
       "transport": {
         "type": "stdio"
       }
     },
     {
       "registryType": "mcpb",
-      "identifier": "https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt/releases/download/v1.1.1/photoshop-mcp-imt-1.1.1.mcpb",
-      "fileSha256": "ff3a29a2f62fdf5ecb37f7f3cbee03dada85dc588a87e2a1c88c91d75aa381e2",
+      "identifier": "https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt/releases/download/v1.1.2/photoshop-mcp-imt-1.1.2.mcpb",
+      "fileSha256": "6dc3480d9a9ae1be86a45bd2a365b384615f9d89d8e83a7cd84f8a00887a9ba9",
       "transport": {
         "type": "stdio"
       }
