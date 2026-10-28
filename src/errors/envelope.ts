@@ -312,7 +312,8 @@ export function enrichErrorResult(result: CallToolResult): CallToolResult {
     // not JSON — classify plain error text
   }
 
-  if (text.startsWith('Error:') || text.toLowerCase().includes('error')) {
+  // A localized Photoshop message need not contain the word "error"; its number does not depend on the language.
+  if (text.startsWith('Error:') || text.toLowerCase().includes('error') || extractErrorNumbers(text).length > 0) {
     const message = text.replace(/^Error:\s*/i, '').trim();
     return envelopeToToolResult(classifyError(message));
   }

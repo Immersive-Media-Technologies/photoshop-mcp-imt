@@ -4,7 +4,7 @@
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { describe, expect, it } from 'vitest';
-import { classifyError, extractErrorNumbers } from '../src/errors/envelope.js';
+import { classifyError, enrichErrorResult, extractErrorNumbers } from '../src/errors/envelope.js';
 import { isScriptTimeoutError } from '../src/platform/script-timeout.js';
 import { buildWindowsBridgeScript } from '../src/platform/windows-script-bridge.js';
 
@@ -80,6 +80,20 @@ describe('classifyError without a number (fallback)', () => {
     expect(classifyError('Layer not found: Logo').code).toBe('layer_not_found');
     expect(classifyError('font_not_found: Foo').code).toBe('font_not_found');
     expect(classifyError('Active layer is not a text layer').code).toBe('not_text_layer');
+  });
+});
+
+describe('enrichErrorResult', () => {
+  const result = (text: string) => ({ content: [{ type: 'text' as const, text }], isError: true });
+
+  it('classifies a plain error text that carries a number but not the word "error"', () => {
+    const enriched = enrichErrorResult(result('UXP bridge: Команда «Создать» в данный момент недоступна. (number: -25920)'));
+    expect(JSON.parse((enriched.content[0] as { text: string }).text).code).toBe('command_unavailable');
+  });
+
+  it('leaves a plain text without a number or "error" alone', () => {
+    const plain = result('UXP bridge is not connected');
+    expect(enrichErrorResult(plain)).toBe(plain);
   });
 });
 
