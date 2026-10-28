@@ -1,11 +1,11 @@
 /**
- * Deep Artisan: Photoshop UXP bridge (backup transport for ps-mcp, 2026-09-29).
+ * PS-MCP-IMT Bridge: Photoshop UXP bridge (backup transport for ps-mcp, 2026-09-29).
  *
  * The panel polls the local ps-mcp HTTP server (127.0.0.1:38452, only with
  * PS_MCP_UXP=1) and runs commands inside Photoshop through the UXP API:
  *   ping · state · layers · batchplay · eval_js · export_png · save · neural_filter
  * Every document change goes through core.executeAsModal (required by Photoshop ≥ 22.5).
- * Install: dist/uxp/deepartisan-ps-bridge.ccx (double-click → Creative Cloud), or
+ * Install: dist/uxp/ps-mcp-imt-bridge.ccx (double-click → Creative Cloud), or
  * UXP Developer Tools → Add Plugin → uxp-plugin/manifest.json → Load.
  */
 const { entrypoints } = require('uxp');
@@ -19,22 +19,22 @@ const BRIDGE_BASE = `http://127.0.0.1:${BRIDGE_PORT}`;
 // Panel text in the Photoshop UI language (host.uiLocale, e.g. "ru_RU"); English otherwise.
 const STRINGS = {
   en: {
-    starting: 'Deep Artisan: starting…',
+    starting: 'PS-MCP-IMT: starting…',
     hint: 'Backup transport for ps-mcp (UXP). You can close this panel; the bridge keeps running.',
-    noToken: 'Deep Artisan: no bridge token yet; ps-mcp has not started the bridge (waiting)',
-    tokenRejected: 'Deep Artisan: token rejected, reading it again',
-    idle: 'Deep Artisan: connected to ps-mcp, no commands',
-    serverDown: 'Deep Artisan: ps-mcp is not running (waiting)',
-    error: 'Deep Artisan: error: ',
+    noToken: 'PS-MCP-IMT: no bridge token yet; ps-mcp has not started the bridge (waiting)',
+    tokenRejected: 'PS-MCP-IMT: token rejected, reading it again',
+    idle: 'PS-MCP-IMT: connected to ps-mcp, no commands',
+    serverDown: 'PS-MCP-IMT: ps-mcp is not running (waiting)',
+    error: 'PS-MCP-IMT: error: ',
   },
   ru: {
-    starting: 'Deep Artisan: запуск…',
+    starting: 'PS-MCP-IMT: запуск…',
     hint: 'Запасной транспорт ps-mcp (UXP). Панель можно закрыть — мост продолжает работать.',
-    noToken: 'Deep Artisan: нет токена моста — ps-mcp с мостом ещё не запускался (ждём)',
-    tokenRejected: 'Deep Artisan: токен не принят — перечитываю',
-    idle: 'Deep Artisan: связь с ps-mcp есть, команд нет',
-    serverDown: 'Deep Artisan: ps-mcp не запущен (ждём)',
-    error: 'Deep Artisan: ошибка — ',
+    noToken: 'PS-MCP-IMT: нет токена моста — ps-mcp с мостом ещё не запускался (ждём)',
+    tokenRejected: 'PS-MCP-IMT: токен не принят — перечитываю',
+    idle: 'PS-MCP-IMT: связь с ps-mcp есть, команд нет',
+    serverDown: 'PS-MCP-IMT: ps-mcp не запущен (ждём)',
+    error: 'PS-MCP-IMT: ошибка — ',
   },
 };
 
@@ -57,15 +57,17 @@ const T = STRINGS[LANG];
 let polling = false;
 let status = null;
 
-// Bridge token (09-29): ~/.deepartisan/state/uxp-bridge.token, written by ps-mcp the first
-// time it starts the bridge; without it the server answers 401. Read at startup and on 401.
+// Bridge token: ~/.ps-mcp-imt/uxp-bridge.token, written by ps-mcp the first time it starts
+// the bridge; without it the server answers 401. Read at startup and on 401. The plugin
+// cannot see environment variables, so this is always the default path of the server
+// (src/platform/uxp-bridge-server.ts, defaultUxpTokenPath).
 let bridgeToken = '';
 let tokenWarned = false;
 function tokenPath() {
   const home = (() => { try { return require('os').homedir(); } catch (e) { return ''; } })();
   // Windows: homedir "C:\Users\x" → file:///C:/Users/x (macOS unchanged: file:///Users/x).
   const h = home.replace(/\\/g, '/');
-  return `file://${h.startsWith('/') ? '' : '/'}${h}/.deepartisan/state/uxp-bridge.token`;
+  return `file://${h.startsWith('/') ? '' : '/'}${h}/.ps-mcp-imt/uxp-bridge.token`;
 }
 async function loadToken() {
   try {
@@ -78,7 +80,7 @@ async function loadToken() {
   return false;
 }
 function headers(extra) {
-  return Object.assign({ 'X-DA-Bridge-Token': bridgeToken }, extra || {});
+  return Object.assign({ 'X-PS-MCP-Bridge-Token': bridgeToken }, extra || {});
 }
 
 function setStatus(text) {
@@ -217,7 +219,7 @@ async function handleCommand(cmd) {
         const descriptors = params.descriptors;
         if (!Array.isArray(descriptors) || descriptors.length === 0) throw new Error('descriptors: non-empty array required');
         const options = Object.assign({ synchronousExecution: true, modalBehavior: 'execute' }, params.options || {});
-        data = await modal('Deep Artisan batchPlay', () => action.batchPlay(descriptors, options));
+        data = await modal('PS-MCP-IMT batchPlay', () => action.batchPlay(descriptors, options));
         break;
       }
       case 'eval_js': {
@@ -226,14 +228,14 @@ async function handleCommand(cmd) {
         // An async function, so the body can `await` (closeWithoutSaving, saveAs, batchPlay …).
         const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
         const fn = new AsyncFunction('photoshop', 'uxp', 'params', params.code || '');
-        data = await modal('Deep Artisan script', () => fn(photoshop, require('uxp'), params.args || {}));
+        data = await modal('PS-MCP-IMT script', () => fn(photoshop, require('uxp'), params.args || {}));
         break;
       }
       case 'export_png': {
         const d = app.activeDocument;
         if (!d) throw new Error('no active document');
         const entry = await fileEntry(params.path);
-        await modal('Deep Artisan export', () => d.saveAs.png(entry, { compression: 6 }, true));
+        await modal('PS-MCP-IMT export', () => d.saveAs.png(entry, { compression: 6 }, true));
         data = { path: params.path };
         break;
       }
@@ -242,16 +244,16 @@ async function handleCommand(cmd) {
         if (!d) throw new Error('no active document');
         if (params.path) {
           const entry = await fileEntry(params.path);
-          await modal('Deep Artisan save', () => d.saveAs.psd(entry, {}, true));
+          await modal('PS-MCP-IMT save', () => d.saveAs.psd(entry, {}, true));
         } else {
-          await modal('Deep Artisan save', () => d.save());
+          await modal('PS-MCP-IMT save', () => d.save());
         }
         data = { path: params.path || d.path || null };
         break;
       }
       case 'neural_filter': {
         const descriptors = neuralDescriptors(params.filter, params);
-        data = await modal('Deep Artisan neural filter', () =>
+        data = await modal('PS-MCP-IMT neural filter', () =>
           action.batchPlay(descriptors, { synchronousExecution: true, modalBehavior: 'execute' }),
         );
         break;
@@ -288,7 +290,7 @@ async function pollOnce() {
     if (!res.ok) return;
     const cmd = await res.json();
     if (cmd && cmd.id) {
-      setStatus(`Deep Artisan: ${cmd.action}`);
+      setStatus(`PS-MCP-IMT: ${cmd.action}`);
       await handleCommand(cmd);
     }
   } catch (e) {

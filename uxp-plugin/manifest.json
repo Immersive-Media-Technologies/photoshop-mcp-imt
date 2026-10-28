@@ -1,7 +1,7 @@
 {
-  "id": "com.deepartisan.ps-bridge",
-  "name": "Deep Artisan Bridge",
-  "version": "1.1.0",
+  "id": "llc.imt.ps-mcp-bridge",
+  "name": "PS-MCP-IMT Bridge",
+  "version": "1.2.0",
   "manifestVersion": 5,
   "main": "index.html",
   "host": {
@@ -20,7 +20,7 @@
       "type": "panel",
       "id": "bridgePanel",
       "label": {
-        "default": "Deep Artisan Bridge"
+        "default": "PS-MCP-IMT Bridge"
       },
       "minimumSize": {
         "width": 240,

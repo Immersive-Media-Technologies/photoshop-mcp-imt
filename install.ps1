@@ -37,7 +37,7 @@ else { npm install --no-audit --no-fund 2>&1 | Out-Null }
 if (Test-Path 'node_modules') { Ok 'dependencies installed' } else { Bad 'npm install failed'; exit 1 }
 npm run build 2>&1 | Out-Null
 if (Test-Path 'dist\index.js') { Ok 'server built: dist\index.js' } else { Bad 'build produced no dist\index.js'; exit 1 }
-if (Test-Path 'dist\uxp\deepartisan-ps-bridge.ccx') { Ok 'UXP plugin packed: dist\uxp\deepartisan-ps-bridge.ccx' }
+if (Test-Path 'dist\uxp\ps-mcp-imt-bridge.ccx') { Ok 'UXP plugin packed: dist\uxp\ps-mcp-imt-bridge.ccx' }
 
 Write-Host "`nLive check against Photoshop`n-----------------------------------------------"
 if (-not (Get-Process -Name 'Photoshop' -ErrorAction SilentlyContinue)) {
@@ -88,4 +88,4 @@ if ($NoConfig) {
   Write-Host "Other clients: `"mcpServers`": { `"photoshop`": $serverJson }"
 }
 Write-Host "`nStart with a copy of a real document: the agent edits what is open. The optional UXP panel plugin"
-Write-Host "(dist\uxp\deepartisan-ps-bridge.ccx) keeps reads, save and export working while Photoshop is modal.`n"
+Write-Host "(dist\uxp\ps-mcp-imt-bridge.ccx) keeps reads, save and export working while Photoshop is modal.`n"

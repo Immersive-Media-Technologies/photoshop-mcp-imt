@@ -7,13 +7,13 @@ import { envFlag } from '../utils/env-flag.js';
 const HEALTH_TIMEOUT_MS = 800;
 
 export async function isUxpBridgeReachable(): Promise<boolean> {
-  // Deep Artisan 29.09: сервер не поднимается без PS_MCP_UXP=1 (ничего сетевого);
-  // «достижим» = плагин в Photoshop опрашивает нас (uxpPluginSeen), а не «порт открыт»
+  // The server does not start without PS_MCP_UXP=1 (nothing on the network);
+  // "reachable" = the plugin in Photoshop polls us (uxpPluginSeen), not "the port is open"
   if (!envFlag('PS_MCP_UXP')) return false;
   try {
     const port = await ensureUxpBridgeServer();
     if (uxpBridgeMode() === 'relay') return refreshRelayHealth();
-    // плагин опрашивает раз в 400 мс — сразу после старта сервера ждём первый опрос (до 1.5 с)
+    // the plugin polls every 400 ms: right after the server starts, wait for the first poll (up to 1.5 s)
     for (let i = 0; i < 15 && !uxpPluginSeen(); i++) await new Promise((r) => setTimeout(r, 100));
     if (!uxpPluginSeen()) return false;
     const controller = new AbortController();

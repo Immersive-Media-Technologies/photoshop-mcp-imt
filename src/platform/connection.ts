@@ -127,13 +127,12 @@ export class PhotoshopConnection {
     }
   }
 
-  // Deep Artisan 20.09: Photoshop в модальном режиме (диалог, прогресс «Ход
-  // выполнения», «Выделение объектов» в режиме поиска) не исполняет Apple-events —
-  // КАЖДЫЙ вызов висел до таймаута (30 с) и отдавал безликий «Script execution
-  // timeout», модель повторяла вызов вслепую (живой прогон 20.09: три get_state
-  // подряд). Теперь: таймаут → проба живости 4 с мимо очереди; не ответила →
-  // ошибка `Photoshop busy` (код photoshop_busy) и удержание 8 с — повторные вызовы
-  // падают сразу, без ожидания.
+  // Photoshop in a modal state (a dialog, a progress bar, Object Selection in search
+  // mode) does not run Apple events: EVERY call waited until the timeout (30 s) and
+  // returned a faceless "Script execution timeout", and the model repeated the call
+  // blindly (live run, 2026-09-20: three get_state calls in a row). Now: timeout → a 4 s
+  // liveness probe outside the queue; no answer → a `Photoshop busy` error (code
+  // photoshop_busy) and an 8 s hold, so repeated calls fail at once without waiting.
   private busyUntil = 0;
   private static readonly BUSY_HOLD_MS = 8000;
   static readonly BUSY_MESSAGE =

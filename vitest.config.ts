@@ -1,5 +1,5 @@
-// Deep Artisan: свой конфиг — иначе vitest подхватывает vitest.config.ts родительского
-// репозитория (~/deep-artisan) с его setup-файлом рендерера.
+// Own config: without it, vitest picks up the vitest.config.ts of an enclosing
+// repository (when this one is checked out inside another project) and its setup files.
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({

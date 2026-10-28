@@ -2,7 +2,7 @@
 function sID(s){ return stringIDToTypeID(s); }
 var out = {};
 try {
-  var d = app.documents.add(800, 600, 72, "da-warp", NewDocumentMode.RGB, DocumentFill.WHITE);
+  var d = app.documents.add(800, 600, 72, "warp-probe", NewDocumentMode.RGB, DocumentFill.WHITE);
   var L = d.artLayers.add(); L.name = "BOX";
   d.selection.select([[200,150],[600,150],[600,450],[200,450]]);
   var c = new SolidColor(); c.rgb.red = 200; c.rgb.green = 40; c.rgb.blue = 40;

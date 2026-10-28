@@ -15,6 +15,17 @@ Versions 1.x below are the upstream history of
   Claude Desktop does not show the manifest `version`. `build-mcpb.mjs` appends it at pack time;
   `mcpb/manifest.json` keeps the bare name. Hosts that derive tool ids from the extension name see new ids with
   each version.
+- **The UXP bridge plugin is now «PS-MCP-IMT Bridge»**: id `llc.imt.ps-mcp-bridge`, version 1.2.0,
+  packed as `dist/uxp/ps-mcp-imt-bridge.ccx`. The bridge token header is `X-PS-MCP-Bridge-Token`, and
+  the default token file is `~/.ps-mcp-imt/uxp-bridge.token` (0600). `PS_MCP_UXP_TOKEN_FILE` still
+  overrides the path for the server; the plugin always reads the default path. **Upgrade:** the
+  previous plugin (version 1.1.0, id `com.deepartisan.ps-bridge`) gets 401 from this server. Remove it
+  (UXP Developer Tools → Remove, or delete its folder under `…/Adobe/UXP/Plugins/External/` and its
+  entry in `PluginsInfo/v1/PS.json`), then install the new `.ccx` and open Plugins → PS-MCP-IMT Bridge
+  once. The new server creates its token file on first start.
+- Source layout: the facade is `src/product/facade.ts`, the corner-pin tool `src/tools/distort-tools.ts`;
+  comments in the touched files are English; the one-off `scripts/probe/quad-probe.jsx` is removed
+  (`quad-matrix.jsx` covers the same question).
 - **Error codes no longer depend on the Photoshop UI language.** Photoshop writes its error messages in
   the UI language, so the English/Russian text patterns missed every other language. The envelope now
   classifies by the error number that the ExtendScript wrapper, the recipe wrappers, the UXP bridge and the
@@ -27,7 +38,7 @@ Versions 1.x below are the upstream history of
   names this Photoshop has, read through Action Manager. The names are escaped into the script.
 - Fonts: an exact PostScript name wins over a display-name match (display names can be localized, e.g. CJK
   fonts in a Japanese UI); tool descriptions and docs recommend the PostScript name.
-- The UXP panel (Deep Artisan Bridge) shows English or Russian text by the Photoshop UI language
+- The UXP panel (PS-MCP-IMT Bridge) shows English or Russian text by the Photoshop UI language
   (`host.uiLocale`), English by default; it was Russian only.
 
 ### Fixed

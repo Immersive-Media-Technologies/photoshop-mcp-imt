@@ -50,23 +50,23 @@ npm run test:unit         # vitest, offline
 The panel plugin in `uxp-plugin/` is the second transport (not only Neural Filters — see
 [architecture.md](architecture.md)). Install options:
 
-1. `npm run build:uxp` → `dist/uxp/deepartisan-ps-bridge.ccx` → double-click (Creative Cloud).
+1. `npm run build:uxp` → `dist/uxp/ps-mcp-imt-bridge.ccx` → double-click (Creative Cloud).
    If Creative Cloud answers «Plugin Not Compatible» (it does when Photoshop is missing from its
    installed-apps list), use 2 or 3.
 2. [Adobe UXP Developer Tools](https://developer.adobe.com/photoshop/uxp/2022/guides/devtool/) →
    **Add Plugin** → `uxp-plugin/manifest.json` → **Load** (after `manifest.json` changes: Unload,
    then Load — not Reload).
 3. Manual layout: copy `uxp-plugin/` to
-   `~/Library/Application Support/Adobe/UXP/Plugins/External/com.deepartisan.ps-bridge_1.1.0/`
+   `~/Library/Application Support/Adobe/UXP/Plugins/External/llc.imt.ps-mcp-bridge_1.2.0/`
    (Windows: `%APPDATA%\Adobe\UXP\Plugins\External\…`) and add the entry to
    `…/Adobe/UXP/PluginsInfo/v1/PS.json`:
-   `{"hostMinVersion":"24.0.0","name":"Deep Artisan Bridge","path":"$localPlugins/External/com.deepartisan.ps-bridge_1.1.0","pluginId":"com.deepartisan.ps-bridge","status":"enabled","type":"uxp","versionString":"1.1.0"}`
-   — restart Photoshop → Plugins → Deep Artisan Bridge.
+   `{"hostMinVersion":"24.0.0","name":"PS-MCP-IMT Bridge","path":"$localPlugins/External/llc.imt.ps-mcp-bridge_1.2.0","pluginId":"llc.imt.ps-mcp-bridge","status":"enabled","type":"uxp","versionString":"1.2.0"}`
+   — restart Photoshop → Plugins → PS-MCP-IMT Bridge.
 
 Open the panel once and leave it in your workspace: the plugin loads with the panel and keeps
 polling the server (`127.0.0.1:38452`, override with `PHOTOSHOP_UXP_BRIDGE_PORT`). Start the
 server with `PS_MCP_UXP=1`; it creates the shared-secret token file on first start
-(`~/.deepartisan/state/uxp-bridge.token`, 0600; path for the server: `PS_MCP_UXP_TOKEN_FILE` —
+(`~/.ps-mcp-imt/uxp-bridge.token`, 0600; path for the server: `PS_MCP_UXP_TOKEN_FILE` —
 the plugin reads the default path). Gotcha: UXP 9.4 rejects `network.domains` entries with a
 port, so the manifest declares `"domains": "all"`.
 

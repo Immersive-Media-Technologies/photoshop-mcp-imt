@@ -46,7 +46,7 @@
     "uxpBridge": {
       "type": "boolean",
       "title": "UXP bridge (second transport)",
-      "description": "Start the local bridge for the Deep Artisan Bridge panel plugin (127.0.0.1:38452, shared-secret token). Needs the plugin installed in Photoshop — see the README.",
+      "description": "Start the local bridge for the PS-MCP-IMT Bridge panel plugin (127.0.0.1:38452, shared-secret token). Needs the plugin installed in Photoshop — see the README.",
       "default": true,
       "required": false
     },

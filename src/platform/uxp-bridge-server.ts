@@ -28,7 +28,7 @@ const DEFAULT_PORT = Number.parseInt(process.env.PHOTOSHOP_UXP_BRIDGE_PORT ?? '3
 
 let server: Server | null = null;
 let listenPort = DEFAULT_PORT;
-// Relay mode (01.10): several MCP clients on one machine (Claude Desktop, Cursor, Deep Artisan)
+// Relay mode (10-01): several MCP clients on one machine (Claude Desktop, Cursor, …)
 // each start their own server, but the plugin polls ONE fixed port. The instance that owns the
 // port serves the plugin; every other instance detects it on /health and forwards its commands
 // to the owner over POST /invoke (same shared-secret token). Before this, the second instance
@@ -41,17 +41,22 @@ export function uxpBridgeMode(): 'owner' | 'relay' | 'off' {
 }
 const pendingCommands: UxpBridgeCommand[] = [];
 const results = new Map<string, UxpBridgeResult>();
-// Deep Artisan 29.09: когда плагин опрашивал сервер в последний раз — «мост есть»
-// значит «плагин жив», а не «наш порт открыт»
+// When the plugin last polled the server: "the bridge is there" means "the plugin is
+// alive", not "our port is open".
 let lastPollAt = 0;
 
-// Deep Artisan 29.09 (решение пользователя «мост включён всегда»): порт 127.0.0.1:38452
-// защищён общим секретом — токен лежит в ~/.deepartisan/state/uxp-bridge.token (0600),
-// плагин читает файл и шлёт заголовок X-DA-Bridge-Token; запрос без токена → 401.
-// Файл создаётся один раз и переживает перезапуски (плагин перечитывает его при 401).
-export const UXP_TOKEN_HEADER = 'x-da-bridge-token';
+// The bridge port 127.0.0.1:38452 is protected by a shared secret: the token lives in
+// ~/.ps-mcp-imt/uxp-bridge.token (0600; PS_MCP_UXP_TOKEN_FILE overrides it for the server,
+// the plugin always reads the default path). The plugin reads the file and sends the
+// X-PS-MCP-Bridge-Token header; a request without the token gets 401. The file is created
+// once and survives restarts (the plugin reads it again on 401).
+export const UXP_TOKEN_HEADER = 'x-ps-mcp-bridge-token';
+/** Default token file; uxp-plugin/main.js reads the same path. */
+export function defaultUxpTokenPath(): string {
+  return join(homedir(), '.ps-mcp-imt', 'uxp-bridge.token');
+}
 export function uxpTokenPath(): string {
-  return process.env.PS_MCP_UXP_TOKEN_FILE || join(homedir(), '.deepartisan', 'state', 'uxp-bridge.token');
+  return process.env.PS_MCP_UXP_TOKEN_FILE || defaultUxpTokenPath();
 }
 let token: string | null = null;
 export function uxpBridgeToken(): string {
@@ -61,7 +66,7 @@ export function uxpBridgeToken(): string {
     const t = readFileSync(p, 'utf8').trim();
     if (/^[a-f0-9]{32,}$/i.test(t)) return (token = t);
   } catch {
-    /* файла нет — создадим */
+    /* no file yet: create it */
   }
   const fresh = randomBytes(24).toString('hex');
   try {
@@ -73,7 +78,7 @@ export function uxpBridgeToken(): string {
   }
   return (token = fresh);
 }
-/** Чистая: заголовок запроса совпадает с токеном (сравнение без раннего выхода не нужно — токен случайный). */
+/** Pure: the request header matches the token (no constant-time compare needed: the token is random). */
 export function uxpTokenOk(header: string | string[] | undefined, expected: string): boolean {
   const h = Array.isArray(header) ? header[0] : header;
   return typeof h === 'string' && h.length > 0 && h.trim() === expected;
@@ -82,7 +87,7 @@ export function uxpTokenFileExists(): boolean {
   return existsSync(uxpTokenPath());
 }
 
-/** Плагин опрашивал сервер не позже, чем `withinMs` назад. */
+/** The plugin polled the server no longer than `withinMs` ago. */
 export function uxpPluginSeen(withinMs = 3000): boolean {
   if (relayPort) return relayPluginSeen && Date.now() - relayCheckedAt < withinMs + 2000;
   return lastPollAt > 0 && Date.now() - lastPollAt < withinMs;

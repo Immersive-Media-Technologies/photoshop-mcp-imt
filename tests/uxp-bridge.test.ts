@@ -1,5 +1,5 @@
-// Deep Artisan 29.09: UXP-мост как запасной транспорт — режим, распознавание отказа
-// основного пути и фолбэк фасада (мост подменён).
+// UXP bridge as the backup transport: mode, recognising a failure of the main path,
+// and the facade fallback (the bridge is stubbed).
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const bridge = vi.hoisted(() => ({
@@ -27,7 +27,7 @@ vi.mock('../src/platform/uxp-transport.js', async (importOriginal) => {
 
 import { isTransportFailure } from '../src/platform/uxp-transport.js';
 const { uxpMode } = await vi.importActual<typeof import('../src/platform/uxp-transport.js')>('../src/platform/uxp-transport.js');
-import { buildFacadeTools } from '../src/da/facade.js';
+import { buildFacadeTools } from '../src/product/facade.js';
 import { ToolRegistry, type ToolResult } from '../src/core/tool-registry.js';
 
 function registryWith(getStateResult: ToolResult): ToolRegistry {
@@ -42,17 +42,17 @@ function registryWith(getStateResult: ToolResult): ToolRegistry {
 const textOf = (r: ToolResult): string => r.content.map((c) => (c as { text?: string }).text ?? '').join('');
 
 describe('uxp transport (pure)', () => {
-  it('uxpMode по переменным окружения', () => {
+  it('uxpMode follows the environment variables', () => {
     expect(uxpMode({})).toBe('off');
     expect(uxpMode({ PS_MCP_UXP: '1' })).toBe('fallback');
     expect(uxpMode({ PS_MCP_UXP: '1', PS_MCP_UXP_PREFER: '1' })).toBe('prefer');
     expect(uxpMode({ PS_MCP_UXP_PREFER: '1' })).toBe('off');
   });
-  it('READ_SCRIPT_TIMEOUT_MS — 8 с по умолчанию (30.09: быстрый фолбэк read-only запросов)', async () => {
+  it('READ_SCRIPT_TIMEOUT_MS defaults to 8 s (fast fallback for read-only requests)', async () => {
     const { READ_SCRIPT_TIMEOUT_MS } = await import('../src/tools/state-tools.js');
     expect(READ_SCRIPT_TIMEOUT_MS).toBe(8_000);
   });
-  it('isTransportFailure — только отказы транспорта, не ошибки Photoshop по существу', () => {
+  it('isTransportFailure: only transport failures, not substantive Photoshop errors', () => {
     expect(isTransportFailure('Error: Photoshop busy: it is not responding to scripts')).toBe(true);
     expect(isTransportFailure('Script execution timeout')).toBe(true);
     expect(isTransportFailure('{"code":"extendscript_timeout"}')).toBe(true);
@@ -67,40 +67,40 @@ describe('facade fallback', () => {
     bridge.available = true;
     bridge.mode = 'fallback';
   });
-  it('ExtendScript ответил — UXP не трогаем', async () => {
+  it('ExtendScript answered: UXP is not touched', async () => {
     const tools = buildFacadeTools(registryWith({ content: [{ type: 'text', text: '{"name":"a.psd"}' }] }), new Map());
     const r = await tools.find((t) => t.tool.name === 'ps_get_state')!.handler({});
     expect(textOf(r)).toBe('{"name":"a.psd"}');
     expect(bridge.calls).toEqual([]);
   });
-  it('photoshop_busy + плагин жив → та же операция через UXP с пометкой via', async () => {
+  it('photoshop_busy + plugin alive → the same operation through UXP, marked via', async () => {
     const tools = buildFacadeTools(registryWith({ content: [{ type: 'text', text: 'Photoshop busy' }], isError: true }), new Map());
     const r = await tools.find((t) => t.tool.name === 'ps_get_state')!.handler({});
     expect(r.isError).toBeFalsy();
     expect(JSON.parse(textOf(r))).toMatchObject({ via: 'uxp', name: 'a.psd' });
     expect(bridge.calls).toEqual(['state']);
   });
-  it('плагина нет → ошибка основного пути как есть', async () => {
+  it('no plugin → the main path error as is', async () => {
     bridge.available = false;
     const tools = buildFacadeTools(registryWith({ content: [{ type: 'text', text: 'Photoshop busy' }], isError: true }), new Map());
     const r = await tools.find((t) => t.tool.name === 'ps_get_state')!.handler({});
     expect(r.isError).toBe(true);
     expect(bridge.calls).toEqual([]);
   });
-  it('ошибка по существу (не транспорт) — фолбэка нет', async () => {
+  it('a substantive error (not transport) → no fallback', async () => {
     const tools = buildFacadeTools(registryWith({ content: [{ type: 'text', text: 'no active document' }], isError: true }), new Map());
     const r = await tools.find((t) => t.tool.name === 'ps_get_state')!.handler({});
     expect(r.isError).toBe(true);
     expect(bridge.calls).toEqual([]);
   });
-  it('prefer → UXP первым; export передаёт путь', async () => {
+  it('prefer → UXP first; export passes the path', async () => {
     bridge.mode = 'prefer';
     const tools = buildFacadeTools(registryWith({ content: [{ type: 'text', text: 'x' }] }), new Map());
     await tools.find((t) => t.tool.name === 'ps_get_state')!.handler({});
-    await tools.find((t) => t.tool.name === 'ps_export_frame')!.handler({ path: '/tmp/da-uxp-test/frame.png' });
-    expect(bridge.calls).toEqual(['state', 'export:/tmp/da-uxp-test/frame.png']);
+    await tools.find((t) => t.tool.name === 'ps_export_frame')!.handler({ path: '/tmp/uxp-bridge-test/frame.png' });
+    expect(bridge.calls).toEqual(['state', 'export:/tmp/uxp-bridge-test/frame.png']);
   });
-  it('ps_uxp: виден при включённом мосте, batchplay/script/ping', async () => {
+  it('ps_uxp: visible when the bridge is on; batchplay/script/ping', async () => {
     const tools = buildFacadeTools(registryWith({ content: [{ type: 'text', text: 'x' }] }), new Map());
     const t = tools.find((x) => x.tool.name === 'ps_uxp')!;
     expect(t).toBeTruthy();
@@ -113,12 +113,12 @@ describe('facade fallback', () => {
   });
 });
 
-// 29.09 (мост включён всегда): токен моста — файл 0600, заголовок, 401 без него
+// Bridge token: a 0600 file, a header, 401 without it
 import { mkdtempSync, readFileSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 describe('uxp bridge token', () => {
-  it('uxpTokenOk — совпадение заголовка с ожидаемым, пусто/массив/чужой → false', async () => {
+  it('uxpTokenOk: the header matches the expected token; empty / array / foreign → false', async () => {
     const { uxpTokenOk } = await vi.importActual<typeof import('../src/platform/uxp-bridge-server.js')>('../src/platform/uxp-bridge-server.js');
     expect(uxpTokenOk('abc', 'abc')).toBe(true);
     expect(uxpTokenOk([' abc ', 'x'], 'abc')).toBe(true);
@@ -126,8 +126,8 @@ describe('uxp bridge token', () => {
     expect(uxpTokenOk('', 'abc')).toBe(false);
     expect(uxpTokenOk('abd', 'abc')).toBe(false);
   });
-  it('uxpBridgeToken — создаёт файл 0600 по PS_MCP_UXP_TOKEN_FILE и переиспользует его', async () => {
-    const dir = mkdtempSync(join(tmpdir(), 'da-uxp-token-'));
+  it('uxpBridgeToken creates a 0600 file at PS_MCP_UXP_TOKEN_FILE and reuses it', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'uxp-bridge-token-'));
     process.env.PS_MCP_UXP_TOKEN_FILE = join(dir, 'sub', 'uxp-bridge.token');
     const mod = await vi.importActual<typeof import('../src/platform/uxp-bridge-server.js')>('../src/platform/uxp-bridge-server.js');
     const t = mod.uxpBridgeToken();
@@ -137,5 +137,36 @@ describe('uxp bridge token', () => {
     expect(mod.uxpBridgeToken()).toBe(t);
     expect(mod.uxpTokenFileExists()).toBe(true);
     delete process.env.PS_MCP_UXP_TOKEN_FILE;
+  });
+});
+
+// The plugin cannot read environment variables: it finds the token at the server's default
+// path and sends it in the header the server checks. Both sides must agree.
+describe('bridge identity (server and plugin agree)', () => {
+  const plugin = readFileSync(new URL('../uxp-plugin/main.js', import.meta.url), 'utf8');
+  const manifest = JSON.parse(readFileSync(new URL('../uxp-plugin/manifest.json', import.meta.url), 'utf8'));
+  const pack = readFileSync(new URL('../scripts/pack-uxp.mjs', import.meta.url), 'utf8');
+
+  it('default token file is ~/.ps-mcp-imt/uxp-bridge.token, and the plugin reads that path', async () => {
+    const mod = await vi.importActual<typeof import('../src/platform/uxp-bridge-server.js')>('../src/platform/uxp-bridge-server.js');
+    const { homedir } = await import('node:os');
+    expect(mod.defaultUxpTokenPath()).toBe(join(homedir(), '.ps-mcp-imt', 'uxp-bridge.token'));
+    delete process.env.PS_MCP_UXP_TOKEN_FILE;
+    expect(mod.uxpTokenPath()).toBe(mod.defaultUxpTokenPath());
+    expect(plugin).toContain('/.ps-mcp-imt/uxp-bridge.token');
+  });
+
+  it('header X-PS-MCP-Bridge-Token on both sides', async () => {
+    const mod = await vi.importActual<typeof import('../src/platform/uxp-bridge-server.js')>('../src/platform/uxp-bridge-server.js');
+    expect(mod.UXP_TOKEN_HEADER).toBe('x-ps-mcp-bridge-token');
+    expect(plugin).toContain("'X-PS-MCP-Bridge-Token': bridgeToken");
+  });
+
+  it('plugin id, name and package', () => {
+    expect(manifest.id).toBe('llc.imt.ps-mcp-bridge');
+    expect(manifest.name).toBe('PS-MCP-IMT Bridge');
+    expect(manifest.entrypoints[0].label.default).toBe('PS-MCP-IMT Bridge');
+    expect(manifest.version).toBe('1.2.0');
+    expect(pack).toContain("'ps-mcp-imt-bridge.ccx'");
   });
 });

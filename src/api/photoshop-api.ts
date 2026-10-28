@@ -32,7 +32,7 @@ export class PhotoshopAPIFactory {
   async createAPI(): Promise<PhotoshopAPI> {
     let info = this.connection.getPhotoshopInfo();
 
-    // Deep Artisan 03.10 (live case: the first facade call of a chat — ps_get_state / ps_do — failed
+    // 2026-10-03 (live case: the first facade call of a chat — ps_get_state / ps_do — failed
     // with "Photoshop info not available. Please detect Photoshop first." when the detect cache had
     // expired; the model was told to run a detect tool that the facade does not expose). Detection is
     // our job, not the model's: resolve it here (cache → detector) and only then give up.

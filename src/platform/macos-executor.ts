@@ -228,9 +228,9 @@ end tell`;
   }
 
   /**
-   * Deep Artisan 20.09: проба живости МИМО очереди — ответит ли Photoshop на
-   * крошечный `do javascript` за timeoutMs. В модальном режиме (диалог, прогресс,
-   * инструмент в режиме поиска) Apple-event висит → AppleScript timeout → false.
+   * Liveness probe OUTSIDE the queue: does Photoshop answer a tiny `do javascript`
+   * within timeoutMs? In a modal state (a dialog, a progress bar, a tool in search
+   * mode) the Apple event hangs → AppleScript timeout → false.
    */
   async probeResponsive(timeoutMs: number): Promise<boolean> {
     const secs = Math.max(1, Math.ceil(timeoutMs / 1000));

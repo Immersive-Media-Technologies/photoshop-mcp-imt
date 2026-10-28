@@ -1,7 +1,7 @@
-// Deep Artisan (17.09.2026): телеметрия апстрима (rybbit → hey.sideguard.io,
-// install-cohorts, идентификация машины) ВЫРЕЗАНА. Модуль оставлен заглушкой
-// с тем же интерфейсом, чтобы ядро сервера не переписывать и апстрим
-// сливался без конфликтов по импортам. Ничего никуда не отправляется.
+// Upstream telemetry (rybbit → hey.sideguard.io, install cohorts, machine
+// identification) is REMOVED (2026-09-17). The module stays as a stub with the same
+// interface, so the server core needs no rewrite and upstream merges without import
+// conflicts. Nothing is sent anywhere.
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';

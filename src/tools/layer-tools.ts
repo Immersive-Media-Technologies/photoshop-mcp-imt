@@ -345,7 +345,7 @@ async function getLayers(connection: PhotoshopConnection): Promise<ToolResult> {
     const api = await apiFactory.createAPI();
 
     const script = ExtendScriptSnippets.getLayerNames();
-    // Deep Artisan 30.09: short timeout for a read-only request (see state-tools READ_SCRIPT_TIMEOUT_MS)
+    // Short timeout for a read-only request (see state-tools READ_SCRIPT_TIMEOUT_MS)
     const result = await api.executeScript(script, READ_SCRIPT_TIMEOUT_MS);
 
     return {

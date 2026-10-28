@@ -51,7 +51,7 @@ else npm install --no-audit --no-fund >/dev/null 2>&1; fi
 [ -d node_modules ] && ok "dependencies installed" || { bad "npm install failed"; exit 1; }
 npm run build >/dev/null 2>&1
 [ -f dist/index.js ] && ok "server built: dist/index.js" || { bad "build produced no dist/index.js"; exit 1; }
-[ -f dist/uxp/deepartisan-ps-bridge.ccx ] && ok "UXP plugin packed: dist/uxp/deepartisan-ps-bridge.ccx"
+[ -f dist/uxp/ps-mcp-imt-bridge.ccx ] && ok "UXP plugin packed: dist/uxp/ps-mcp-imt-bridge.ccx"
 
 say ""; say "Live check against Photoshop"; say "─────────────────────────────────────────────"
 if ! pgrep -f "Adobe Photoshop" >/dev/null 2>&1; then
@@ -102,5 +102,5 @@ NODE
 fi
 say ""
 say "${DIM}Start with a copy of a real document: the agent edits what is open. The optional UXP panel${OFF}"
-say "${DIM}plugin (dist/uxp/deepartisan-ps-bridge.ccx) keeps reads, save and export working while Photoshop is modal.${OFF}"
+say "${DIM}plugin (dist/uxp/ps-mcp-imt-bridge.ccx) keeps reads, save and export working while Photoshop is modal.${OFF}"
 say ""

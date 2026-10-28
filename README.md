@@ -6,9 +6,7 @@ An MCP server that lets an AI agent (Claude Desktop, Cursor, ChatGPT or any MCP-
 client) drive a running Adobe Photoshop: documents, layers, text, masks, selections, filters,
 adjustments, Smart Objects, artboards, generative tools, export — from natural language.
 
-Built by **[Immersive Media Technologies](https://github.com/Immersive-Media-Technologies)** as the
-Photoshop backbone of the Deep Artisan agent pipeline, and released so that other agent builders
-can use the same layer. A fork of
+Built by **[Immersive Media Technologies](https://github.com/Immersive-Media-Technologies)**. A fork of
 [alisaitteke/photoshop-mcp](https://github.com/alisaitteke/photoshop-mcp) (merged through 1.7.27)
 with a second transport, a small tool surface, honest errors and no telemetry.
 
@@ -124,7 +122,7 @@ retries the transient COM «busy» error (`PSMCP_BUSY_RETRY_MS`, default 2000 ms
 | `PS_MCP_FACADE`             | off                                     | `1` / `true` → the client sees the 9 `ps_*` tools only; everything else through `ps_do`             |
 | `PS_MCP_UXP`                | off                                     | `1` / `true` → start the bridge server for the UXP plugin (`127.0.0.1:38452`) and register `ps_uxp` |
 | `PS_MCP_UXP_PREFER`         | off                                     | `1` / `true` → UXP first for state / layers / save / export, ExtendScript second                    |
-| `PS_MCP_UXP_TOKEN_FILE`     | `~/.deepartisan/state/uxp-bridge.token` | shared secret the plugin must send (`X-DA-Bridge-Token`); created 0600 on first start               |
+| `PS_MCP_UXP_TOKEN_FILE`     | `~/.ps-mcp-imt/uxp-bridge.token`        | shared secret the plugin must send (`X-PS-MCP-Bridge-Token`); created 0600 on first start           |
 | `PHOTOSHOP_UXP_BRIDGE_PORT` | `38452`                                 | bridge port                                                                                         |
 | `PS_MCP_READ_TIMEOUT_MS`    | `8000`                                  | ExtendScript timeout for read-only tools (fast fallback to UXP when Photoshop is modal)             |
 | `PHOTOSHOP_SCRIPT_TIMEOUT`  | `30000`                                 | ExtendScript timeout for everything else; `timeout_ms` on `ps_execute_script` overrides per call    |
@@ -133,12 +131,12 @@ retries the transient COM «busy» error (`PSMCP_BUSY_RETRY_MS`, default 2000 ms
 
 ### The UXP bridge (second transport)
 
-A 10-KB panel plugin, **Deep Artisan Bridge** (`uxp-plugin/`, id `com.deepartisan.ps-bridge`),
+A 10-KB panel plugin, **PS-MCP-IMT Bridge** (`uxp-plugin/`, id `llc.imt.ps-mcp-bridge`),
 lives inside Photoshop and polls the server. It runs `state`, `layers`, `batchplay`, `eval_js`,
 `export_png`, `save` and `neural_filter` inside `core.executeAsModal`, so it answers while
 ExtendScript is blocked. Install one of three ways, in this order of convenience:
 
-1. Double-click `dist/uxp/deepartisan-ps-bridge.ccx` (Creative Cloud). If Creative Cloud says
+1. Double-click `dist/uxp/ps-mcp-imt-bridge.ccx` (Creative Cloud). If Creative Cloud says
    «Plugin Not Compatible» — it does when Photoshop is missing from its installed-apps list —
    use 2 or 3.
 2. [UXP Developer Tools](https://developer.adobe.com/photoshop/uxp/2022/guides/devtool/) → Add
@@ -146,10 +144,11 @@ ExtendScript is blocked. Install one of three ways, in this order of convenience
 3. Manual layout into Adobe's UXP plugin folder plus one entry in `PluginsInfo/v1/PS.json` —
    exact paths and the JSON line in [`docs/development.md`](docs/development.md).
 
-Then Photoshop → Plugins → **Deep Artisan Bridge**; leave the panel in your workspace so the plugin
+Then Photoshop → Plugins → **PS-MCP-IMT Bridge**; leave the panel in your workspace so the plugin
 loads with Photoshop. The port is protected by a shared-secret file the server creates on first
-start and the plugin reads; a request without it gets 401, `/health` is open and reveals nothing.
-Several MCP clients at once (Claude Desktop, Cursor, Deep Artisan …) share one bridge: the first
+start and the plugin reads (always at the default path, `~/.ps-mcp-imt/uxp-bridge.token`); a request
+without it gets 401, `/health` is open and reveals nothing.
+Several MCP clients at once (Claude Desktop, Cursor, …) share one bridge: the first
 server owns the port, the others relay to it.
 Honest about the boundary: the file is readable by any process of your user account (like an
 `.env`) — it protects against other users, sandboxes and a stray client on the port, not against

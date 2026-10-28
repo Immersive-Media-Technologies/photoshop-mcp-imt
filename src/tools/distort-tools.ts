@@ -1,32 +1,33 @@
-// Deep Artisan (20.09.2026): корнер-пин / перспективное искажение слоя headless.
+// Corner pin / perspective distortion of a layer, headless (2026-09-20).
 //
-// Живой факт (Photoshop 2026, 27.9): `Trnf` с ключом `quadrilateral` (классический
-// ScriptListener-рецепт Free Transform → Distort) молча игнорируется — проверено
-// 12 комбинаций (pixel/smart × abs/rel/center × Qcsa/Qcs0), границы слоя не меняются
-// (scripts/probe/quad-matrix.jsx). А `Trnf` + `warp: warpCustom` с сеткой 4×4
-// (customEnvelopeWarp/meshPoints) исполняется без диалога и реально искажает слой
-// (scripts/probe/warp-probe.jsx). Поэтому корнер-пин строится как custom warp:
-// 16 контрольных точек бикубической Безье-поверхности подбираются так, чтобы
-// поверхность ИНТЕРПОЛИРОВАЛА гомографию (unit square → целевой четырёхугольник)
-// в 16 узлах (u,v ∈ {0,⅓,⅔,1}): P = B⁻¹ · S · B⁻ᵀ, B — матрица Бернштейна в узлах.
-// Режим `bilinear` — контрольные точки прямо по билинейной сетке (прямые остаются
-// прямыми, интерьер без схождения перспективы).
+// Live finding (Photoshop 2026, 27.9): `Trnf` with the `quadrilateral` key (the classic
+// ScriptListener recipe for Free Transform → Distort) is silently ignored: 12 combinations
+// tested (pixel/smart × abs/rel/center × Qcsa/Qcs0), the layer bounds do not change
+// (scripts/probe/quad-matrix.jsx). `Trnf` + `warp: warpCustom` with a 4×4 mesh
+// (customEnvelopeWarp/meshPoints) runs without a dialog and really distorts the layer
+// (scripts/probe/warp-probe.jsx). So the corner pin is built as a custom warp: the 16
+// control points of a bicubic Bézier surface are chosen so that the surface INTERPOLATES
+// the homography (unit square → target quadrilateral) at 16 nodes
+// (u,v ∈ {0,⅓,⅔,1}): P = B⁻¹ · S · B⁻ᵀ, where B is the Bernstein matrix at the nodes.
+// The `bilinear` mode puts the control points straight on the bilinear grid (straight
+// lines stay straight, the interior has no perspective convergence).
 //
-// Модальные Perspective Warp / Vanishing Point через скрипт не запускаются в принципе
-// (UI-инструменты); эта операция покрывает их геометрию для одной плоскости; две
-// фасады = два слоя × две операции.
+// The modal Perspective Warp / Vanishing Point cannot be started from a script at all
+// (they are UI tools); this operation covers their geometry for one plane; two facades =
+// two layers × two operations.
 //
-// ⚠️ Smart Object: тот же warp на смарт-объекте даёт ДРУГУЮ геометрию (проба 20.09:
-// сжатие правого края 600→520 — границы 520, но точки (505,235)/(505,365)/(515,300)
-// пустые; identity-сетка — без изменений). Точная форма гарантирована только на
-// пиксельном слое, поэтому смарт-объект без `rasterize:true` — ошибка, не тихая порча.
+// ⚠️ Smart Object: the same warp on a Smart Object gives a DIFFERENT geometry (probe of
+// 2026-09-20: squeezing the right edge 600→520 gives bounds of 520, but the points
+// (505,235)/(505,365)/(515,300) are empty; the identity mesh changes nothing). The exact
+// shape is guaranteed only on a pixel layer, so a Smart Object without `rasterize:true`
+// is an error, not silent damage.
 import { ToolDefinition, ToolResult } from '../core/tool-registry.js';
 import { PhotoshopConnection } from '../platform/connection.js';
 import { PhotoshopAPIFactory } from '../api/photoshop-api.js';
 
 type Pt = [number, number];
 
-/** Гомография unit square (0,0)-(1,1) → четырёхугольник TL,TR,BR,BL (8 неизвестных). */
+/** Homography of the unit square (0,0)-(1,1) → quadrilateral TL,TR,BR,BL (8 unknowns). */
 export function homographyFromUnitSquare(tl: Pt, tr: Pt, br: Pt, bl: Pt): number[] {
   const src: Pt[] = [[0, 0], [1, 0], [1, 1], [0, 1]];
   const dst: Pt[] = [tl, tr, br, bl];
@@ -63,7 +64,7 @@ export function applyHomography(h: number[], u: number, v: number): Pt {
   return [(h[0] * u + h[1] * v + h[2]) / w, (h[3] * u + h[4] * v + h[5]) / w];
 }
 
-// B⁻¹ для узлов t = 0, ⅓, ⅔, 1 (кубический Бернштейн)
+// B⁻¹ for the nodes t = 0, ⅓, ⅔, 1 (cubic Bernstein)
 const BINV = [
   [1, 0, 0, 0],
   [-5 / 6, 3, -3 / 2, 1 / 3],
@@ -72,14 +73,14 @@ const BINV = [
 ];
 
 /**
- * 16 контрольных точек (row-major: строки v сверху вниз, столбцы u слева направо)
- * бикубической Безье-поверхности, интерполирующей отображение f в узлах {0,⅓,⅔,1}².
+ * 16 control points (row-major: rows v top to bottom, columns u left to right)
+ * of a bicubic Bézier surface that interpolates the mapping f at the nodes {0,⅓,⅔,1}².
  */
 export function bezierControlPoints(f: (u: number, v: number) => Pt): Pt[] {
   const ts = [0, 1 / 3, 2 / 3, 1];
   // S[i][j] = f(u_j, v_i)
   const S: Pt[][] = ts.map((v) => ts.map((u) => f(u, v)));
-  // P = Binv · S · Binvᵀ  (по каждой координате)
+  // P = Binv · S · Binvᵀ  (per coordinate)
   const P: Pt[][] = [];
   for (let i = 0; i < 4; i++) {
     P.push([]);
@@ -222,7 +223,7 @@ export function distortLayerScript(
   `;
 }
 
-export function createDaDistortTools(connection: PhotoshopConnection): ToolDefinition[] {
+export function createDistortTools(connection: PhotoshopConnection): ToolDefinition[] {
   return [
     {
       tool: {

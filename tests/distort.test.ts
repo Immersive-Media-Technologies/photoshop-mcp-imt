@@ -1,6 +1,6 @@
-// Deep Artisan 20.09: математика корнер-пина (гомография + Безье-интерполяция).
+// Corner-pin math (homography + Bézier interpolation).
 import { describe, expect, it } from 'vitest';
-import { applyHomography, bezierControlPoints, homographyFromUnitSquare, meshForQuad } from '../src/tools/da-distort-tools.js';
+import { applyHomography, bezierControlPoints, homographyFromUnitSquare, meshForQuad } from '../src/tools/distort-tools.js';
 
 const close = (a: number, b: number): boolean => Math.abs(a - b) < 1e-6;
 

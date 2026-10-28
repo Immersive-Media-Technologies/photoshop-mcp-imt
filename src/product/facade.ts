@@ -1,17 +1,16 @@
-// Deep Artisan (17.09.2026): ФАСАД поверх реестра инструментов апстрима.
+// Facade over the upstream tool registry (2026-09-17).
 //
-// Апстрим отдаёт клиенту все ~116 тулов, а определения инструментов уходят
-// модели на КАЖДОМ ходу — это 25–30K токенов контекста. Deep Artisan уже
-// живёт по схеме диспетчера (After Effects: ae_catalog + ae_do), поэтому при
-// PS_MCP_FACADE=1 клиенту видны только:
-//   ps_catalog(category?)        — перечень операций (по категориям / с параметрами)
-//   ps_do(operation, args)       — любая операция апстрима по имени
-//   ps_batch(ops[], stopOnError) — пачка операций подряд
+// Upstream exposes all ~116 tools to the client, and tool definitions go to the
+// model on EVERY turn: 25–30K tokens of context. With the facade (a dispatcher,
+// the catalog + do pattern) the client sees only:
+//   ps_catalog(category?)        — list of operations (by category / with parameters)
+//   ps_do(operation, args)       — any upstream operation by name
+//   ps_batch(ops[], stopOnError) — several operations in a row
 //   ps_get_state / ps_get_layers / ps_save_document / ps_execute_script
-//   ps_export_frame(path)        — PNG текущего вида (плитка «Материалы»)
-//   ps_recipe(name, args)        — готовые сценарии апстрима
-// Все настоящие тулы остаются зарегистрированными — ps_do зовёт их через
-// реестр, так что поведение и ошибки апстрима не меняются.
+//   ps_export_frame(path)        — PNG of the current view
+//   ps_recipe(name, args)        — upstream's ready-made recipes
+// All real tools stay registered: ps_do calls them through the registry, so
+// upstream behaviour and errors do not change.
 import { mkdirSync } from 'node:fs';
 import { envFlag } from '../utils/env-flag.js';
 import { dirname } from 'node:path';
@@ -43,7 +42,7 @@ function text(t: string, isError = false): ToolResult {
   return isError ? { content: [{ type: 'text', text: t }], isError: true } : { content: [{ type: 'text', text: t }] };
 }
 
-/** Полная сигнатура операции (для каталога по категории). */
+/** Full operation signature (for the per-category catalog). */
 function opDetail(t: Tool): string {
   const props = (t.inputSchema?.properties ?? {}) as Record<string, { type?: string; description?: string; enum?: unknown[]; default?: unknown }>;
   const req = new Set((t.inputSchema?.required as string[] | undefined) ?? []);
@@ -81,9 +80,9 @@ export function buildFacadeTools(
     return registry.execute(name, args ?? {});
   };
 
-  // Deep Artisan 29.09: UXP-мост — запасной транспорт. ExtendScript отказал
-  // (Photoshop модальный / таймаут) и плагин жив → та же операция через UXP;
-  // PS_MCP_UXP_PREFER=1 → UXP первым. Ответ помечается «via UXP bridge».
+  // UXP bridge as the backup transport (2026-09-29): ExtendScript failed (Photoshop
+  // is modal / timed out) and the plugin is alive → the same operation through UXP;
+  // PS_MCP_UXP_PREFER=1 → UXP first. The answer is marked "via: uxp".
   const resultText = (r: ToolResult): string =>
     r.content.map((c) => (c.type === 'text' ? String((c as { text?: string }).text ?? '') : '')).join('\n');
   const viaUxp = async (
@@ -220,17 +219,17 @@ export function buildFacadeTools(
         },
       },
       handler: async (args) => {
-        // папка назначения — как у ps_export_frame (Photoshop её не создаёт)
+        // create the target folder, as ps_export_frame does (Photoshop does not)
         if (typeof args.path === 'string' && args.path.trim()) {
           try {
             mkdirSync(dirname(args.path.trim()), { recursive: true });
           } catch {
-            /* пусть упадёт само сохранение */
+            /* let the save itself fail */
           }
         }
         const p = typeof args.path === 'string' && args.path.trim() ? args.path.trim() : undefined;
         const fmt = String(args.format ?? '').toUpperCase();
-        // UXP-фолбэк — только PSD/в место (иные форматы — у ExtendScript-пути)
+        // UXP fallback only for PSD / save in place (other formats use the ExtendScript path)
         if (!p || !fmt || fmt === 'PSD') return viaUxp(() => run('save_document', args), () => uxp.save(p));
         return run('save_document', args);
       },
@@ -250,13 +249,13 @@ export function buildFacadeTools(
         },
       },
       handler: async (args) => {
-        // Photoshop не создаёт папку вывода сам — первый экспорт в новый
-        // каталог падал «Общая ошибка Photoshop» (живой прогон 17.09)
+        // Photoshop does not create the output folder: the first export into a new
+        // folder failed with "General Photoshop error" (live run, 2026-09-17)
         if (typeof args.path === 'string' && args.path.trim()) {
           try {
             mkdirSync(dirname(args.path.trim()), { recursive: true });
           } catch {
-            /* пусть упадёт сам экспорт с понятной ошибкой */
+            /* let the export itself fail with a clear error */
           }
         }
         return viaUxp(
@@ -277,8 +276,8 @@ export function buildFacadeTools(
           required: ['script'],
         },
       },
-      // апстрим ждёт параметр `code` (живой прогон 17.09: со `script` код не
-      // исполнялся и тул молча отдавал Result: "undefined")
+      // upstream expects the `code` parameter (live run, 2026-09-17: with `script` the
+      // code did not run and the tool silently returned Result: "undefined")
       handler: async (args) => run('execute_script', { code: args.script ?? args.code }),
     },
     {
@@ -302,7 +301,7 @@ export function buildFacadeTools(
       tool: {
         name: 'ps_uxp',
         description:
-          'Photoshop UXP bridge (backup transport, runs INSIDE Photoshop via the Deep Artisan Bridge plugin). ' +
+          'Photoshop UXP bridge (backup transport, runs INSIDE Photoshop via the PS-MCP-IMT Bridge plugin). ' +
           'Use when ExtendScript calls fail with photoshop_busy / extendscript_timeout, or for batchPlay-only features. ' +
           'action: ping | batchplay (descriptors: action descriptor JSON array) | script (code: JS with photoshop/uxp/params in scope, use return).',
         inputSchema: {
@@ -320,8 +319,8 @@ export function buildFacadeTools(
       handler: async (args) => {
         if (!(await uxpAvailable()))
           return text(
-            'UXP bridge is not connected: the Deep Artisan Bridge plugin is not running inside Photoshop. ' +
-              'Ask the user to open Plugins → Deep Artisan Bridge in Photoshop (the panel must be opened once per Photoshop launch), or to install the plugin (README, section «The UXP bridge»).',
+            'UXP bridge is not connected: the PS-MCP-IMT Bridge plugin is not running inside Photoshop. ' +
+              'Ask the user to open Plugins → PS-MCP-IMT Bridge in Photoshop (the panel must be opened once per Photoshop launch), or to install the plugin (README, section «The UXP bridge»).',
             true,
           );
         const act = String(args.action ?? '');

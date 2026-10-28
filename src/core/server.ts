@@ -26,7 +26,7 @@ import { createImageTools } from '../tools/image-tools.js';
 import { createImagePlacementTools } from '../tools/image-placement-tools.js';
 import { createSmartObjectTools } from '../tools/smart-object-tools.js';
 import { createLayerTransformTools } from '../tools/layer-transform-tools.js';
-import { createDaDistortTools } from '../tools/da-distort-tools.js';
+import { createDistortTools } from '../tools/distort-tools.js';
 import { createLayerPropertiesTools } from '../tools/layer-properties-tools.js';
 import { createFilterTools } from '../tools/filter-tools.js';
 import { createAdjustmentTools } from '../tools/adjustment-tools.js';
@@ -47,8 +47,8 @@ import { createStackTools } from '../tools/stack-tools.js';
 import { createExportTools } from '../tools/export-tools.js';
 import { createArtboardTools } from '../tools/artboard-tools.js';
 import { ensureUxpBridgeServer } from '../platform/uxp-bridge-server.js';
-// Deep Artisan (17.09): фасад ps_catalog/ps_do поверх реестра (PS_MCP_FACADE=1)
-import { buildFacadeTools, facadeEnabled, FACADE_TOOL_NAMES } from '../da/facade.js';
+// Facade ps_catalog / ps_do over the registry (PS_MCP_FACADE=1)
+import { buildFacadeTools, facadeEnabled, FACADE_TOOL_NAMES } from '../product/facade.js';
 import { probePhotoshopEngine } from './ping-engine.js';
 import { envFlag } from '../utils/env-flag.js';
 
@@ -62,7 +62,7 @@ export class PhotoshopMCPServer {
   private toolRegistry: ToolRegistry;
   private promptRegistry: PromptRegistry;
   private session: Session;
-  /** Deep Artisan: категория каждого тула (для ps_catalog). */
+  /** Category of every tool (for ps_catalog). */
   private categories = new Map<string, string>();
 
   constructor(options: PhotoshopMCPServerOptions) {
@@ -136,8 +136,8 @@ export class PhotoshopMCPServer {
 
     const connection = this.session.getConnection();
 
-    // Deep Artisan: HTTP-мост UXP (Neural Filters) слушает порт — только по
-    // явному PS_MCP_UXP=1, иначе сервер не открывает ничего сетевого
+    // The UXP HTTP bridge (Neural Filters, backup transport) listens on a port only with
+    // an explicit PS_MCP_UXP=1; otherwise the server opens nothing on the network
     if (envFlag('PS_MCP_UXP')) {
       void ensureUxpBridgeServer().catch((err) => {
         this.logger.debug('UXP bridge server not started:', err);
@@ -150,8 +150,8 @@ export class PhotoshopMCPServer {
     this.registerToolDefinitions(createImagePlacementTools(connection), 'image');
     this.registerToolDefinitions(createSmartObjectTools(connection), 'smart_object');
     this.registerToolDefinitions(createLayerTransformTools(connection), 'transform');
-    // Deep Artisan 20.09: корнер-пин через custom warp (quadrilateral в PS 2026 мёртв)
-    this.registerToolDefinitions(createDaDistortTools(connection), 'transform');
+    // Corner pin through a custom warp (quadrilateral does nothing in PS 2026)
+    this.registerToolDefinitions(createDistortTools(connection), 'transform');
     this.registerToolDefinitions(createLayerPropertiesTools(connection), 'layer');
     this.registerToolDefinitions(createFilterTools(connection), 'filter');
     this.registerToolDefinitions(createAdjustmentTools(connection), 'adjust');
@@ -171,8 +171,8 @@ export class PhotoshopMCPServer {
     this.registerToolDefinitions(createExportTools(connection), 'export');
     this.registerToolDefinitions(createArtboardTools(connection), 'artboard');
     this.registerToolDefinitions(createRecipeTools(connection), 'recipe');
-    // Deep Artisan: фасад регистрируется всегда (ps_do доступен и без
-    // PS_MCP_FACADE), но при PS_MCP_FACADE=1 клиенту виден ТОЛЬКО он
+    // The facade is always registered (ps_do works without PS_MCP_FACADE too),
+    // but with PS_MCP_FACADE=1 the client sees ONLY the facade
     for (const def of buildFacadeTools(this.toolRegistry, this.categories)) {
       this.toolRegistry.register(def.tool.name, {
         tool: def.tool,

@@ -1,7 +1,7 @@
 /**
- * Deep Artisan 29.09: упаковка UXP-плагина моста в .ccx (zip папки uxp-plugin/).
- * Установка пользователем: двойной клик по dist/uxp/deepartisan-ps-bridge.ccx →
- * Creative Cloud ставит плагин в Photoshop (Plugins → Deep Artisan Bridge).
+ * Packs the UXP bridge plugin into a .ccx (a zip of the uxp-plugin/ folder).
+ * The user installs it by double-clicking dist/uxp/ps-mcp-imt-bridge.ccx →
+ * Creative Cloud installs the plugin into Photoshop (Plugins → PS-MCP-IMT Bridge).
  * Run: node scripts/pack-uxp.mjs
  */
 import { execFileSync } from 'node:child_process';
@@ -12,12 +12,12 @@ import { fileURLToPath } from 'node:url';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = join(ROOT, 'uxp-plugin');
 const OUT_DIR = join(ROOT, 'dist', 'uxp');
-const OUT = join(OUT_DIR, 'deepartisan-ps-bridge.ccx');
+const OUT = join(OUT_DIR, 'ps-mcp-imt-bridge.ccx');
 
 const manifest = JSON.parse(readFileSync(join(SRC, 'manifest.json'), 'utf8'));
 mkdirSync(OUT_DIR, { recursive: true });
 rmSync(OUT, { force: true });
-// .ccx = zip с manifest.json в корне (без папки-обёртки)
+// .ccx = a zip with manifest.json at the root (no wrapper folder)
 const FILES = ['manifest.json', 'index.html', 'main.js'];
 if (process.platform === 'win32') {
   // Windows has no `zip`; its bsdtar (System32\tar.exe, Windows 10+) writes zip archives.

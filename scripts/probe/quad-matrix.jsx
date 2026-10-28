@@ -1,6 +1,6 @@
 // Matrix probe: which quadrilateral form actually distorts? Fresh doc per case, nothing saved.
 function run(kind, variant, ftcs) {
-  var d = app.documents.add(800, 600, 72, "da-q", NewDocumentMode.RGB, DocumentFill.WHITE);
+  var d = app.documents.add(800, 600, 72, "quad-matrix", NewDocumentMode.RGB, DocumentFill.WHITE);
   var L = d.artLayers.add(); L.name = "BOX";
   d.selection.select([[200,150],[600,150],[600,450],[200,450]]);
   var c = new SolidColor(); c.rgb.red = 200; c.rgb.green = 40; c.rgb.blue = 40;

@@ -15,13 +15,13 @@ PhotoshopMCPServer (Node.js)  ── facade: ps_catalog / ps_do / ps_batch … (
   │ ExtendScript                         │ HTTP poll 127.0.0.1:38452 (PS_MCP_UXP=1, shared-secret token)
   │ osascript (macOS) / COM (Windows)    │
   ▼                                      ▼
-Adobe Photoshop  ◄───────────  UXP panel plugin «Deep Artisan Bridge» (core.executeAsModal)
+Adobe Photoshop  ◄───────────  UXP panel plugin «PS-MCP-IMT Bridge» (core.executeAsModal)
 ```
 
 | Layer                  | Responsibility                                                                                                                                           | Where                                                                           |
 | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | Server core            | MCP protocol, tool and prompt registries, document targeting                                                                                             | `src/core/`                                                                     |
-| Facade                 | 9 agent-facing tools over the full registry; categories for `ps_catalog`                                                                                 | `src/da/facade.ts`                                                              |
+| Facade                 | 9 agent-facing tools over the full registry; categories for `ps_catalog`                                                                                 | `src/product/facade.ts`                                                         |
 | ExtendScript transport | platform detection, script execution, queue, busy probe, script timeout                                                                                  | `src/platform/connection.ts`, `*-executor.ts`, `script-timeout.ts`              |
 | UXP transport          | bridge HTTP server, plugin client, fallback / prefer logic                                                                                               | `src/platform/uxp-bridge-server.ts`, `uxp-bridge-client.ts`, `uxp-transport.ts` |
 | UXP plugin             | panel inside Photoshop: `ping`, `state`, `layers`, `batchplay`, `eval_js`, `export_png`, `save`, `neural_filter`                                         | `uxp-plugin/`                                                                   |

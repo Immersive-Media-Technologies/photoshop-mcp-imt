@@ -84,7 +84,7 @@ scripts/add-copyright-headers.ts
 # Spike probe output (generated locally)
 scripts/output/*.json
 
-# Deep Artisan fork: lockfile tracked — npm ci must be reproducible on reinstall
+# Lockfile tracked: npm ci must be reproducible on reinstall
 !package-lock.json
 .ship/
 

@@ -1,6 +1,6 @@
 /**
  * Boolean environment flags. Accepts the forms every launcher produces:
- * "1" / "0" (shell, Deep Artisan), "true" / "false" (Claude Desktop MCPB
+ * "1" / "0" (shell, app launchers), "true" / "false" (Claude Desktop MCPB
  * user_config booleans), "on" / "off", "yes" / "no". Unset or anything else →
  * the default.
  */

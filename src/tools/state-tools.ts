@@ -9,9 +9,9 @@ import { parseExtendScriptPayload } from '../utils/extendscript-result.js';
 
 const PREVIEW_MAX_BYTES = 4 * 1024 * 1024;
 
-/** Deep Artisan 30.09: read-only запросы состояния никогда честно не длятся 30 с —
- *  короткий таймаут, чтобы при модальном Photoshop фолбэк на UXP наступал быстро
- *  (PS_MCP_READ_TIMEOUT_MS, по умолчанию 8000). */
+/** Read-only state requests never honestly take 30 s: a short timeout, so that with
+ *  Photoshop modal the UXP fallback kicks in quickly
+ *  (PS_MCP_READ_TIMEOUT_MS, default 8000). */
 export const READ_SCRIPT_TIMEOUT_MS = (() => {
   const n = Number(process.env.PS_MCP_READ_TIMEOUT_MS);
   return Number.isFinite(n) && n > 0 ? n : 8_000;

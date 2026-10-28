@@ -28,7 +28,7 @@ export type PhotoshopErrorCode =
   | 'unsupported_color_mode'
   | 'no_base_layer_below'
   | 'not_clipping'
-  // Deep Artisan 20.09
+  // 2026-09-20
   | 'photoshop_busy'
   | 'command_unavailable'
   | 'user_cancelled'
@@ -55,7 +55,7 @@ type ErrorPattern = ErrorRule & { pattern: RegExp };
  * number and before Photoshop's own (localized) text.
  */
 const MCP_MESSAGE_PATTERNS: ErrorPattern[] = [
-  // Deep Artisan 20.09: matched before the generative patterns, otherwise
+  // 2026-09-20: matched before the generative patterns, otherwise
   // "timed out ... queue" was classified as generative_timeout.
   // (script_timeout 20.09 -> upstream 1.7.27 extendscript_timeout + refineTimeoutEnvelope/scratch disk; codes merged.)
   // Photoshop is modal (a dialog, a progress bar, a tool in search mode): EVERY script

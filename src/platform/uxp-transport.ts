@@ -1,19 +1,19 @@
 /**
- * Deep Artisan 29.09.2026 — UXP-мост как ЗАПАСНОЙ транспорт (решение пользователя).
+ * UXP bridge as the BACKUP transport (2026-09-29).
  *
- * Основной путь ps-mcp — ExtendScript через osascript. Он ломается в двух случаях:
- * Photoshop модальный (диалог/прогресс — Apple-events не исполняются, код
- * photoshop_busy / extendscript_timeout) и если Adobe снимет ExtendScript. UXP-плагин
- * (uxp-plugin/) сидит внутри Photoshop, опрашивает наш HTTP-сервер (только при
- * PS_MCP_UXP=1) и исполняет команды через UXP API (batchPlay, DOM, saveAs).
+ * The main path of ps-mcp is ExtendScript through osascript / COM. It breaks in two
+ * cases: Photoshop is modal (a dialog / progress bar: Apple events do not run, code
+ * photoshop_busy / extendscript_timeout), and if Adobe ever removes ExtendScript. The
+ * UXP plugin (uxp-plugin/) sits inside Photoshop, polls our HTTP server (only with
+ * PS_MCP_UXP=1) and runs commands through the UXP API (batchPlay, DOM, saveAs).
  *
- * Режим: PS_MCP_UXP=1 — мост включён, используется как ФОЛБЭК (после отказа
- * ExtendScript, если плагин жив); PS_MCP_UXP_PREFER=1 — UXP первым для операций,
- * у которых есть UXP-реализация (state/layers/save/export). Без переменных —
- * ничего сетевого не открывается, поведение апстрима.
- * 30.09 (решение пользователя): приложение ставит PREFER=1 всегда — при
- * модальном Photoshop ExtendScript молчал 30 с + 5 с AppleScript до фолбэка, а
- * UXP отвечает за секунду по localhost; без плагина PREFER ничего не меняет.
+ * Mode: PS_MCP_UXP=1 turns the bridge on and uses it as a FALLBACK (after ExtendScript
+ * failed, if the plugin is alive); PS_MCP_UXP_PREFER=1 puts UXP first for the operations
+ * that have a UXP implementation (state/layers/save/export). Without the variables
+ * nothing is opened on the network and the behaviour is upstream's.
+ * PREFER=1 is worth setting: with Photoshop modal, ExtendScript waited 30 s + 5 s of
+ * AppleScript before the fallback, while UXP answers within a second over localhost;
+ * without the plugin PREFER changes nothing.
  */
 import { invokeUxpBridge } from './uxp-bridge-server.js';
 import { envFlag } from '../utils/env-flag.js';
@@ -26,7 +26,7 @@ export function uxpMode(env: NodeJS.ProcessEnv = process.env): UxpMode {
   return envFlag('PS_MCP_UXP_PREFER', false, env) ? 'prefer' : 'fallback';
 }
 
-/** Ошибка основного пути, после которой имеет смысл пробовать UXP. Чистая. */
+/** A failure of the main path after which trying UXP makes sense. Pure. */
 export function isTransportFailure(text: string): boolean {
   return /Photoshop busy|photoshop_busy|Script execution timeout|extendscript_timeout|script_timeout|waiting in the execution queue|osascript|-2741|AppleEvent|Apple event/i.test(
     text,
