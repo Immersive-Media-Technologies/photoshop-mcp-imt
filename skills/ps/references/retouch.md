@@ -32,7 +32,7 @@ Matches colour, light, shadows and tone of a placed subject to the background.
   plans; up to 56 MP; preserves detail; 10 credits ≤ 25 MP, 20 credits 25–56 MP) · **Topaz Bloom** (premium; up to 9 MP; invents detail;
   35 credits) → **Upscale** → the result opens as a **new document** with a new name → `ps_get_state`, `list_documents`, then work there.
 - Script: `generative_upscale {target_scale: 2|4}` — events `generativeUpscale` / `superResolution` / `enhanceDetail`, 120 s wait,
-  Photoshop ≥ 27 (`get_capabilities.generative_upscale`); unverified live; no model choice. Without credits: `resize_image` (bicubic).
+  Photoshop ≥ 27 (`get_capabilities.generative_upscale`); **verified live on 27.11**: Photoshop renders 1–3 min behind a progress dialog (modal → the call answers `generative_timeout`), then the result opens as a NEW active document «… Firefly Upscaler 2x» at 2× — poll `ps_get_state` every 15 s, do not call again; no model choice. Without credits: `resize_image` (bicubic).
 
 ## AI Sharpen / AI Denoise (Topaz; UI, paid credits)
 Filter › **AI Sharpen** / **AI Denoise** → one button. Files up to 56 MP; 10 credits ≤ 25 MP, 20 credits 25–56 MP. **Destructive**: the

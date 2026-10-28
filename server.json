@@ -22,7 +22,7 @@
     {
       "registryType": "mcpb",
       "identifier": "https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt/releases/download/v1.1.0/photoshop-mcp-imt-1.1.0.mcpb",
-      "fileSha256": "bc93ec1153325306cc71733ad221794337ae88dd7dff2ae40bc57436330cee60",
+      "fileSha256": "f59a426a428d0dc633e82fc62b9fe737fba883f41395c98039136821543bb17c",
       "transport": {
         "type": "stdio"
       }

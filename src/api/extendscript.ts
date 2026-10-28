@@ -3701,35 +3701,43 @@ export const ExtendScriptSnippets = {
       return { ok: false, error: lastError || 'No generative action succeeded' };
     }
 
-    function __mcp_waitGenerativeComplete(doc, baselineHist, maxWaitMs) {
+    // History length and layer count before a generative action. HistoryState has no
+    // 'index' in ExtendScript (it read undefined, so the old wait never completed and
+    // every generative call burned its whole 90–120 s budget after a finished render).
+    function __mcp_genBaseline(doc) {
+      var b = { hist: 0, layers: 0 };
+      try { b.hist = doc.historyStates.length; } catch (eH) {}
+      try { b.layers = doc.layers.length; } catch (eL) {}
+      return b;
+    }
+
+    // executeAction(syntheticFill) returns when the Generative Layer exists, so this
+    // normally completes on the first check; the loop covers builds that return early.
+    function __mcp_waitGenerativeComplete(doc, baseline, maxWaitMs) {
       var waited = 0;
       var step = 500;
       var maxMs = maxWaitMs || 90000;
-      var baseline = baselineHist;
-      while (waited < maxMs) {
+      var b = (baseline && typeof baseline === 'object') ? baseline : { hist: Number(baseline) || 0, layers: 0 };
+      while (true) {
         try {
-          if (doc.historyStates.length > baseline + 1) {
-            return { completed: true, waited_ms: waited, history_states: doc.historyStates.length };
+          var hist = doc.historyStates.length;
+          var layers = 0;
+          try { layers = doc.layers.length; } catch (eL) {}
+          if (hist > b.hist || (b.layers && layers > b.layers)) {
+            return { completed: true, waited_ms: waited, history_states: hist };
           }
         } catch (e) {}
+        if (waited >= maxMs) break;
         $.sleep(step);
         waited += step;
       }
-      return { completed: false, waited_ms: waited, history_states: doc.historyStates.length };
+      var finalHist = 0;
+      try { finalHist = doc.historyStates.length; } catch (eF) {}
+      return { completed: false, waited_ms: waited, history_states: finalHist };
     }
 
     function __mcp_hasSelection(doc) {
       try { return doc.selection.bounds != null; } catch (e) { return false; }
-    }
-
-    function __mcp_historyIndex(doc) {
-      try {
-        if (doc.activeHistoryState && doc.activeHistoryState.index != null) {
-          return doc.activeHistoryState.index;
-        }
-      } catch (eHist) {}
-      try { return doc.historyStates.length; } catch (eLen) {}
-      return 0;
     }
 
     /**
@@ -3789,17 +3797,27 @@ export const ExtendScriptSnippets = {
         return { ok: false, code: 'generative_no_selection', message: 'Active pixel selection required for generative fill' };
       }
 
-      var baselineHist = doc.activeHistoryState.index;
-      var result = __mcp_tryGenerativeAction(
-        ['generativeFill', 'generativeLayerFill', 'firefly'],
-        function(actionId) {
-          var desc = new ActionDescriptor();
-          try { desc.putString(sTID('prompt'), ${escaped}); } catch (eP) {}
-          try { desc.putString(sTID('text'), ${escaped}); } catch (eT) {}
-          try { desc.putString(sTID('promptText'), ${escaped}); } catch (ePT) {}
-          return desc;
-        }
-      );
+      var baselineHist = __mcp_genBaseline(doc);
+      // Photoshop records Generative Fill as the syntheticFill event (the same route
+      // generative_remove and generate_image use); the older generativeFill /
+      // generativeLayerFill / firefly events raise Error 8 on Photoshop 2026 and stay
+      // only as a fallback for older builds.
+      var result;
+      try {
+        result = { ok: true, action_id: __mcp_syntheticFill(doc, ${escaped}, 'in_painting') };
+      } catch (eSynth) {
+        result = __mcp_tryGenerativeAction(
+          ['generativeFill', 'generativeLayerFill', 'firefly'],
+          function(actionId) {
+            var desc = new ActionDescriptor();
+            try { desc.putString(sTID('prompt'), ${escaped}); } catch (eP) {}
+            try { desc.putString(sTID('text'), ${escaped}); } catch (eT) {}
+            try { desc.putString(sTID('promptText'), ${escaped}); } catch (ePT) {}
+            return desc;
+          }
+        );
+        if (!result.ok) result.error = String(eSynth.message || eSynth) + '; fallback: ' + String(result.error || '');
+      }
 
       if (!result.ok) {
         var msg = String(result.error || '');
@@ -3844,7 +3862,7 @@ export const ExtendScriptSnippets = {
       try { doc.selection.feather(new UnitValue(${featherPx}, 'px')); } catch (eF) {}
     }
 
-    var baselineHist = __mcp_historyIndex(doc);
+    var baselineHist = __mcp_genBaseline(doc);
     var actionId = '';
     try {
       actionId = __mcp_syntheticFill(doc, 'remove the selected object');
@@ -3867,9 +3885,10 @@ export const ExtendScriptSnippets = {
     };
   `,
 
-  generativeExpand: (direction: string, prompt: string) => {
+  generativeExpand: (direction: string, prompt: string, amountPx?: number) => {
     const escaped = jsStringLiteral(prompt);
     const dir = jsStringLiteral(direction);
+    const amount = Number.isFinite(amountPx) && (amountPx as number) > 0 ? Math.round(amountPx as number) : 0;
     return `
       ${helperFunctions}
       ${ExtendScriptSnippets.generativeHelpers()}
@@ -3878,27 +3897,67 @@ export const ExtendScriptSnippets = {
       var doc = app.activeDocument;
       app.displayDialogs = DialogModes.NO;
 
-      var baselineHist = doc.activeHistoryState.index;
-      var result = __mcp_tryGenerativeAction(
-        ['generativeExpand', 'expandCanvas', 'generativeCanvasExpand'],
-        function(actionId) {
-          var desc = new ActionDescriptor();
-          try { desc.putString(sTID('prompt'), ${escaped}); } catch (eP) {}
-          try { desc.putString(sTID('direction'), ${dir}); } catch (eD) {}
-          return desc;
-        }
-      );
-
-      if (!result.ok) {
-        return { ok: false, code: 'generative_unavailable', message: String(result.error || '') };
+      // Generative Expand is what the Crop tool does: enlarge the canvas, then fill the new
+      // transparent area with the syntheticFill event (out_painting). There is no
+      // generativeExpand event — Photoshop 2026 answers "general error" to every guess.
+      var dirName = ${dir};
+      var w0 = doc.width.as('px'), h0 = doc.height.as('px');
+      var amount = ${amount} > 0 ? ${amount} : Math.round(Math.max(w0, h0) * 0.25);
+      var addL = 0, addR = 0, addT = 0, addB = 0;
+      if (dirName === 'left') addL = amount;
+      else if (dirName === 'right') addR = amount;
+      else if (dirName === 'top') addT = amount;
+      else if (dirName === 'bottom') addB = amount;
+      else { addL = addR = addT = addB = amount; }
+      try {
+        var bg = doc.backgroundLayer;
+        if (bg) bg.isBackgroundLayer = false; // a Background layer would fill the new area with the background colour
+      } catch (eBg) {}
+      var anchor = AnchorPosition.MIDDLECENTER;
+      if (dirName === 'left') anchor = AnchorPosition.MIDDLERIGHT;
+      else if (dirName === 'right') anchor = AnchorPosition.MIDDLELEFT;
+      else if (dirName === 'top') anchor = AnchorPosition.BOTTOMCENTER;
+      else if (dirName === 'bottom') anchor = AnchorPosition.TOPCENTER;
+      var baselineHist = __mcp_genBaseline(doc);
+      var prevUnits = app.preferences.rulerUnits;
+      app.preferences.rulerUnits = Units.PIXELS;
+      try {
+        doc.resizeCanvas(new UnitValue(w0 + addL + addR, 'px'), new UnitValue(h0 + addT + addB, 'px'), anchor);
+      } finally {
+        app.preferences.rulerUnits = prevUnits;
       }
-
+      var w1 = w0 + addL + addR, h1 = h0 + addT + addB;
+      // Select the added strips (a 1 px overlap into the picture gives the model context).
+      var o = 1;
+      var first = true;
+      function addStrip(l, t, r, b) {
+        if (r <= l || b <= t) return;
+        var region = [[l, t], [r, t], [r, b], [l, b]];
+        if (first) { doc.selection.select(region); first = false; }
+        else doc.selection.select(region, SelectionType.EXTEND);
+      }
+      if (addL) addStrip(0, 0, addL + o, h1);
+      if (addR) addStrip(w1 - addR - o, 0, w1, h1);
+      if (addT) addStrip(0, 0, w1, addT + o);
+      if (addB) addStrip(0, h1 - addB - o, w1, h1);
+      var actionId = '';
+      var flows = ['out_painting', 'in_painting'];
+      var lastErr = '';
+      for (var f = 0; f < flows.length && !actionId; f++) {
+        try { actionId = __mcp_syntheticFill(doc, ${escaped}, flows[f]) + ':' + flows[f]; } catch (eGen) { lastErr = String(eGen.message || eGen); }
+      }
+      if (!actionId) {
+        var msg = lastErr;
+        var code = /credit|quota|sign in|subscription/i.test(msg) ? 'generative_credits_exhausted' : 'generative_unavailable';
+        return { ok: false, code: code, message: 'canvas enlarged to ' + w1 + 'x' + h1 + ' but the fill failed: ' + msg };
+      }
       var wait = __mcp_waitGenerativeComplete(doc, baselineHist, 120000);
+      try { doc.selection.deselect(); } catch (eDesel) {}
 
       return {
         ok: true,
-        summary: 'Generative expand invoked via ' + result.action_id,
-        details: { action_id: result.action_id, direction: ${dir}, prompt: ${escaped}, wait: wait },
+        summary: 'Generative expand: canvas ' + w0 + 'x' + h0 + ' → ' + w1 + 'x' + h1 + ' via ' + actionId,
+        details: { action_id: actionId, direction: dirName, amount_px: amount, width: w1, height: h1, prompt: ${escaped}, wait: wait },
         next_suggested_tool: 'photoshop_get_preview'
       };
     `;
@@ -3912,7 +3971,7 @@ export const ExtendScriptSnippets = {
     var doc = app.activeDocument;
     app.displayDialogs = DialogModes.NO;
 
-    var baselineHist = doc.activeHistoryState.index;
+    var baselineHist = __mcp_genBaseline(doc);
     var result = __mcp_tryGenerativeAction(
       ['generativeUpscale', 'superResolution', 'enhanceDetail'],
       function(actionId) {
@@ -3947,7 +4006,7 @@ export const ExtendScriptSnippets = {
       app.displayDialogs = DialogModes.NO;
 
       var skyFile = new File(${escaped});
-      var baselineHist = doc.activeHistoryState.index;
+      var baselineHist = __mcp_genBaseline(doc);
       var result = __mcp_tryGenerativeAction(
         ['skyReplacement', 'replaceSky', 'replaceSkyBackground'],
         function(actionId) {
@@ -3997,7 +4056,7 @@ export const ExtendScriptSnippets = {
         doc = app.activeDocument;
       }
 
-      var baselineHist = __mcp_historyIndex(doc);
+      var baselineHist = __mcp_genBaseline(doc);
       var actionId = '';
       try {
         actionId = __mcp_syntheticFill(doc, ${escaped}, 'text_to_image');

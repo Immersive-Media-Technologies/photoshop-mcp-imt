@@ -27,6 +27,25 @@ Versions 1.x below are the upstream history of
   `.mcpb` and the npm package. With `PS_MCP_FACADE=1` the server instructions tell the client to read
   it first.
 
+### Fixed
+
+- **Generative operations, verified live on Photoshop 27.11** (they had never been run):
+  - `generative_fill` goes through the `syntheticFill` event Photoshop actually records (the route
+    `generative_remove` and `generate_image` already used); the old `generativeFill` events stay as a
+    fallback for older builds.
+  - `generative_expand` is rebuilt: there is no generativeExpand event in Photoshop 2026 — the operation
+    now does what the Crop tool does (unlocks the Background layer, enlarges the canvas by `amount_px`
+    on the chosen side(s), outpaints the new strip with `syntheticFill`). New parameter `amount_px`.
+  - The completion wait compared `HistoryState.index`, which does not exist in ExtendScript, so every
+    generative call burned its whole 90–120 s budget after the render had finished — it now compares
+    history length and layer count and returns at once.
+  - `generative_upscale` renders behind a progress dialog, which makes Photoshop modal; the call answers
+    `generative_timeout` with the way to pick the result up (a new document) instead of a transport error.
+  - toSource payloads whose strings carry line breaks (Photoshop's localized error texts) are parsed
+    instead of surfacing as «Unparseable generative result».
+  - `sky_replacement` is still unverified on a real photo (`replaceSky` answers «not available» on a
+    synthetic image); the skill says so.
+
 ### Changed
 
 - The product is **PS-MCP-IMT + SKILLS**; descriptions and the registry entry say so.

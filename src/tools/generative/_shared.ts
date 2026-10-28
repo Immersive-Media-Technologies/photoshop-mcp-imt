@@ -107,3 +107,19 @@ export function normalizeExpandDirection(value: unknown): GenerativeExpandDirect
 }
 
 export { ExtendScriptSnippets };
+
+/**
+ * Generative Upscale renders behind a progress dialog (1–3 min), so Photoshop is modal and the
+ * script call ends in photoshop_busy / extendscript_timeout although the upscale is running.
+ * Report that as in-progress with the way to pick the result up, instead of a transport error.
+ */
+export function generativeInProgressFromError(error: unknown, whatHappens: string): ToolResult | null {
+  const msg = error instanceof Error ? error.message : String(error);
+  if (!/photoshop_busy|photoshop busy|extendscript_timeout|timed out|timeout/i.test(msg)) return null;
+  return atomicFailure({
+    ok: false,
+    code: 'generative_timeout',
+    message: `Photoshop is rendering: ${whatHappens} Poll photoshop_get_state every 15 s until it answers (photoshop_busy while the progress dialog is up); do not call the operation again.`,
+    suggested_next_tool: 'photoshop_get_state',
+  });
+}

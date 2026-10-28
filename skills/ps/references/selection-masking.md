@@ -34,7 +34,7 @@ and the recipes deselect.
 
 ## Sky Replacement (native, credit-free)
 - `sky_replacement {sky_image_path?}` — Edit › Sky Replacement by Action Manager; without a path Photoshop uses its presets. Events
-  `skyReplacement` / `replaceSky` / `replaceSkyBackground`, 120 s wait; capability `sky_replacement_native` (≥ 25). Unverified live.
+  `skyReplacement` / `replaceSky` / `replaceSkyBackground`, 120 s wait; capability `sky_replacement_native` (≥ 25). On 27.11 `replaceSky` is a real event but answers «not available» on a synthetic image — unverified on a photo with a sky; refused → `recipe sky_blend` or the UI (Edit › Sky Replacement).
 - `recipe sky_blend {sky_image_path, horizon_pct 0–100, feather_pct 0–50, x, y, use_native_sky}` — tries native first when capable,
   else places the sky file with a horizon-gradient mask; verified in the sweep with `use_native_sky:false`.
 - Sky presets and the Sky Replacement dialog (foreground lighting, edge shift) stay UI; a generative sky: selection (Select › Sky, UI, or

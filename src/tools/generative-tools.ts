@@ -7,6 +7,7 @@ import type { PhotoshopConnection } from '../platform/connection.js';
 import {
   clampGenerativeScale,
   ExtendScriptSnippets,
+  generativeInProgressFromError,
   normalizeExpandDirection,
   parseGenerativeResult,
   requireGenerativeCapability,
@@ -76,7 +77,7 @@ export function createGenerativeTools(connection: PhotoshopConnection): ToolDefi
       tool: {
         name: 'photoshop_generative_expand',
         description:
-          'Extend the canvas beyond its edges using Generative Expand (Firefly).\n\n' +
+          'Extend the canvas beyond its edges using Generative Expand (Firefly): enlarges the canvas by amount_px on the chosen side(s) and fills the new area with Generative Fill (outpainting).\n\n' +
           'Use when: outpainting, extending background, or expanding composition.\n\n' +
           'Returns: { ok, summary, details: { direction, prompt, wait } }.\n' +
           'Preconditions: active document; generative_fill capability.\n' +
@@ -95,6 +96,10 @@ export function createGenerativeTools(connection: PhotoshopConnection): ToolDefi
               description: 'Expand direction (default all)',
               default: 'all',
             },
+            amount_px: {
+              type: 'number',
+              description: 'Pixels added on each expanded side (default: 25% of the longer side)',
+            },
           },
         },
       },
@@ -107,7 +112,7 @@ export function createGenerativeTools(connection: PhotoshopConnection): ToolDefi
           'Upscale the active document using Generative Upscale (PS 27+).\n\n' +
           'Use when: increasing resolution with AI detail recovery.\n' +
           'Do NOT use when: generative_upscale flag is false — use photoshop_resize_image.\n\n' +
-          'Returns: { ok, summary, details }.\n' +
+          'Returns: { ok, summary, details } — or generative_timeout while Photoshop renders behind its progress dialog (1–3 min): poll photoshop_get_state; the result opens as a NEW active document named "… Firefly Upscaler Nx".\n' +
           'Preconditions: generative_upscale capability; signed-in Adobe account.',
         inputSchema: {
           type: 'object',
@@ -216,10 +221,11 @@ async function generativeExpand(
       ? args.prompt.trim()
       : 'extend the background naturally';
   const direction = normalizeExpandDirection(args.direction);
+  const amountPx = typeof args.amount_px === 'number' && Number.isFinite(args.amount_px) && args.amount_px > 0 ? Math.round(args.amount_px) : undefined;
 
   const raw = await runGenerativeSnippet(
     connection,
-    ExtendScriptSnippets.generativeExpand(direction, prompt)
+    ExtendScriptSnippets.generativeExpand(direction, prompt, amountPx)
   );
   return parseGenerativeResult(raw);
 }
@@ -232,10 +238,17 @@ async function generativeUpscale(
   if (blocked) return blocked;
 
   const scale = clampGenerativeScale(args.target_scale);
-  const raw = await runGenerativeSnippet(
-    connection,
-    ExtendScriptSnippets.generativeUpscale(scale)
-  );
+  let raw: unknown;
+  try {
+    raw = await runGenerativeSnippet(connection, ExtendScriptSnippets.generativeUpscale(scale));
+  } catch (error) {
+    const inProgress = generativeInProgressFromError(
+      error,
+      `Generative Upscale ${scale}x runs behind a progress dialog and opens the result as a NEW document ("… Firefly Upscaler ${scale}x"), which becomes active.`
+    );
+    if (inProgress) return inProgress;
+    throw error;
+  }
   return parseGenerativeResult(raw);
 }
 

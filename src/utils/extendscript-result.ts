@@ -17,12 +17,15 @@ export function parseExtendScriptPayload(raw: unknown): unknown {
   }
 
   if (looksLikeExtendScriptObjectLiteral(trimmed)) {
+    // toSource() writes line breaks inside string values verbatim (Photoshop's localized
+    // error texts carry them), which is a syntax error in a JS literal — escape them.
+    const literal = trimmed.replace(/\r?\n/g, '\\n');
     try {
-      return new Function(`return ${trimmed}`)() as unknown;
+      return new Function(`return ${literal}`)() as unknown;
     } catch {
-      if (trimmed.startsWith('(') && trimmed.endsWith(')')) {
+      if (literal.startsWith('(') && literal.endsWith(')')) {
         try {
-          return new Function(`return ${trimmed.slice(1, -1)}`)() as unknown;
+          return new Function(`return ${literal.slice(1, -1)}`)() as unknown;
         } catch {
           // Keep raw string below.
         }
