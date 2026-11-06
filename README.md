@@ -6,7 +6,7 @@ Let an AI agent (Claude Desktop, Cursor, ChatGPT or any MCP-compatible client) d
 Adobe Photoshop: documents, layers, text, masks, selections, filters, adjustments, Smart Objects,
 artboards, generative tools, export — from natural language.
 
-**Every Adobe UI language · a large skills library · built for generative features.** Photoshop-MCP-IMT works with every UI language Adobe ships, comes with a large skills library and is built for Adobe's generative features — Generative Fill, Generative Expand, Generative Upscale, text to image, Firefly and partner models, generative credits.
+**Every Adobe UI language · checks its work by sight · a large skills library · built for generative features.** Photoshop-MCP-IMT works with every UI language Adobe ships, and the agent checks its work by sight: after each step it looks at an image of the document — also while Photoshop is held by a dialog — and places selections, Generative Fill areas and corner pins by coordinates it reads from that image. It comes with a large skills library and is built for Adobe's generative features — Generative Fill, Generative Expand, Generative Upscale, text to image, Firefly and partner models, generative credits.
 
 Two parts, made to work together:
 
@@ -51,6 +51,7 @@ fonts and actions without localized names, so it behaves the same on every UI la
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | -------------------------------------------------------- |
 | Talks to Photoshop via  | **ExtendScript (osascript / COM) _and_ a UXP panel plugin** — chosen per call, UXP as fallback or first (`PS_MCP_UXP_PREFER=1`)                                                                                                                                                                               | ExtendScript via AppleScript / COM (we are a fork)                                           | UXP plugin → separate WebSocket proxy (Python) → MCP server             | UXP plugin → Rust broker (`adobepy`) → Python MCP server |
 | When Photoshop is modal | **`photoshop_busy` in 4 s** with an instruction for the user, 8 s hold; reads / save / export **continue through UXP** (`via: uxp`)                                                                                                                                                                           | 30 s timeout → `extendscript_timeout`, retry ping                                            | —                                                                       | UXP only, so unaffected — but no ExtendScript DOM at all |
+| Vision: acting on what the agent sees | an image of the document after every step (`ps_export_frame`, through UXP while Photoshop is modal); rectangle / ellipse selections, Generative Fill areas and corner pins placed by coordinates read from it | preview image (`photoshop_get_preview`); Select Subject, rectangle / ellipse selections by coordinates | document image; polygon / rectangle / ellipse selections by coordinates, Select Subject, mask from selection | export to a file; rectangle / ellipse selections by coordinates |
 | Tool surface            | **135 tools registered, 10 visible** (`ps_catalog` / `ps_do` / `ps_batch` …) — ~900 tokens of definitions per turn instead of ~25 K; every tool reachable through `ps_do`                                                                                                                                      | 118–122 tools, all visible (`photoshop_*` + 16 recipes)                                      | «a subset of functionality» per app, low-level tools (proof of concept) | 40+ typed tools in 8 skill packages                      |
 | Headless corner-pin     | **`photoshop_distort_layer`**: four corners → custom warp solved for the homography; verified that `Trnf` + `quadrilateral` is silently ignored in Photoshop 2026 (12 combinations probed)                                                                                                                    | —                                                                                            | —                                                                       | —                                                        |
 | Telemetry               | **none** — analytics module is a no-op, feedback nudge removed, server sends nothing                                                                                                                                                                                                                          | anonymous analytics **on by default** (opt-out), product-feedback nudge via `photoshop_ping` | —                                                                       | —                                                        |
@@ -192,6 +193,15 @@ server owns the port, the others relay to it.
 Honest about the boundary: the file is readable by any process of your user account (like an
 `.env`) — it protects against other users, sandboxes and a stray client on the port, not against
 malware running as you.
+
+## How the agent sees
+
+The agent checks every step on a picture, not on «the script said OK»: `ps_export_frame` writes a PNG
+of the current state and keeps working through the UXP bridge while Photoshop is held by a dialog;
+`photoshop_get_preview` returns a smaller image straight to the model. From that picture the model
+reads coordinates — where a selection, a Generative Fill area or the four corners of a corner pin
+belong — and the skill tells it to look again after every change: values first (`ps_get_layers`,
+selection bounds, document size), then the picture.
 
 ## Tools
 

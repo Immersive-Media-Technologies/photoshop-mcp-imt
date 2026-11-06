@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.Immersive-Media-Technologies/photoshop-mcp-imt",
   "title": "Photoshop-MCP-IMT + SKILLS — Photoshop for AI agents",
-  "description": "Photoshop for AI agents: every Adobe UI language, large skills library, generative tools first",
+  "description": "Photoshop for AI agents: every Adobe UI language, checks by sight, skills, generative tools first",
   "repository": {
     "url": "https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt",
     "source": "github"
