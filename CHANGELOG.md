@@ -9,8 +9,11 @@ Versions 1.x below are the upstream history of
 
 ## [Unreleased]
 
+## [1.1.3] - 2026-11-06
+
 ### Changed
 
+- The Photoshop skill (`skills/ps/SKILL.md` 1.1.0) in the skill-creator form: frontmatter `version` / `changes` / `description_ru`, §4 is a map — one entry per ability with «Read when …» and the routing line; the per-feature route tables live in the references.
 - README in plain Markdown — Glama and other catalogs strip raw HTML: the «Add to Cursor» button, client icons now show there too.
 
 ## [1.1.2] - 2026-10-28

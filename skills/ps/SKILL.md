@@ -1,8 +1,13 @@
 ---
 name: ps
 description: Drive Adobe Photoshop through Photoshop-MCP-IMT (ps_get_state, ps_get_layers, ps_catalog, ps_do, ps_batch, ps_recipe, ps_export_frame, ps_uxp) and use Photoshop's AI tools — Generative Fill / Expand / Remove, Generate Image and Background, partner models (Gemini, FLUX, GPT Image), reference images, Prompt to edit, Markup, Harmonize, Generative Upscale, the Remove tool, Select Subject, Neural Filters, AI Assistant, Firefly Boards — on localized Photoshop in any UI language too. Read at the start of any Photoshop task. This file is the router; open only the reference it points to.
-revision: 1
-updated_at: 2026-10-28
+description_ru: |
+  Управление Adobe Photoshop через Photoshop-MCP-IMT и его AI-инструменты (Generative Fill / Expand / Remove,
+  Generate Image и Background, партнёрские модели, Harmonize, Generative Upscale, Select Subject, Neural Filters,
+  AI Assistant) — и на локализованном Photoshop. Читать в начале любой задачи в Photoshop; этот файл — маршрутизатор,
+  открывать только тот справочник, на который он указывает.
+version: 1.1.0
+changes: "1.1.0 (06.11): SKILL.md in the skill-creator form — frontmatter version/changes/description_ru, §4 is the map: one entry per ability with «Read when …» and the routing line; the per-feature route tables live in the references. 1.0.0 (28.10): first version (Photoshop 2026, helpx checked 2026-10-28)."
 ---
 
 # Photoshop — agent skill
@@ -44,23 +49,53 @@ Facts: Photoshop 2026 (27.9–27.11), helpx pages checked 2026-10-28. Adobe MAX 
 - **Any UI language.** Errors are classified by Photoshop's error number: `code` is the same on every language, `message` keeps the localized text. Fonts: PostScript name (`list_fonts`). Actions: `play_action` needs the set and action names as this Photoshop's Actions panel shows them — an unknown name returns `invalid_arguments` listing the real names, retry with one. The Background layer by flag (above). Blend modes, formats, directions, presets: English enum values everywhere.
 - **Modal Photoshop** (a dialog, a progress bar, Object Selection in search mode, Generative Fill rendering in the UI): ExtendScript stops → `photoshop_busy` within ~4 s with an instruction for the user; repeats fail at once for 8 s. Do not retry blindly: tell the user what to close, or let `ps_get_state` / `ps_get_layers` / `ps_save_document` / `ps_export_frame` go through UXP (`via: uxp`) when the bridge is on. `extendscript_timeout` = a script is still running: `ps_do ping` until it succeeds, then re-read.
 
-## 4. Scripting boundary → reference
+## 4. Map of references
 
-Photoshop 2026 scripts Generative Remove and Generate Image through Action Manager (`syntheticFill`); the model picker, reference images, Prompt to edit, Markup, Harmonize, Generate Background, the Remove tool and the AI Assistant have no scripting API. Neural Filters need the UXP bridge. Every generative step spends Adobe credits (`gotchas.md` §Credits).
+Photoshop 2026 scripts Generative Remove and Generate Image through Action Manager (`syntheticFill`); the model
+picker, reference images, Prompt to edit, Markup, Harmonize, Generate Background, the Remove tool and the AI
+Assistant have no scripting API. Neural Filters need the UXP bridge. Every generative step spends Adobe credits.
 
-| feature | route | read |
-|---|---|---|
-| Generative Fill · Generative Remove · Generate Image | `generative_fill {prompt}` on a selection · `generative_remove` · `generate_image` — Firefly default model, paid credits, verified live on 27.11 (a Generative Layer per call); partner models, reference images, variations: UI, paid credits | `references/generative.md` |
-| Generative Expand | `generative_expand {direction, amount_px, prompt}` — enlarges the canvas and outpaints the strip, verified live · UI Crop tool → Generative Expand, Firefly models only, paid credits | `references/generative.md` |
-| Prompt to edit, Markup, Generate Background, Generate Similar, Enhance Detail | UI, paid credits | `references/generative.md` |
-| Remove tool (Find distractions), Content-Aware Fill | UI, credit-free · `content_aware_fill` · `recipe remove_distraction` · `image_stack` | `references/retouch.md` |
-| Harmonize, Generative Upscale, AI Sharpen / AI Denoise, Neural Filters | UI, paid credits · `generative_upscale {target_scale}` — renders 1–3 min behind a progress dialog, answers `generative_timeout`, the result is a NEW active document (poll `ps_get_state`), verified live · `neural_filter` (UXP bridge, unverified) | `references/retouch.md` |
-| Select Subject, Remove Background, masks, selection as prompt, Quick Mask, Sky Replacement | `select_subject` · `recipe remove_background` · mask operations · `sky_replacement` (credit-free; `replaceSky` answers «not available» on a synthetic image — unverified on a real photo) · `recipe sky_blend`; Select Sky, Quick Mask, Select and Mask: UI | `references/selection-masking.md` |
-| Frequency separation, dodge & burn, portrait, curves, LUTs, grades, styles, type | recipes `frequency_separation` · `dodge_burn` · `enhance_portrait` · `apply_color_grade`; `adjust_curves`, `apply_lut`, `apply_layer_style`, `create_text_layer` … | `references/color-retouch.md` |
-| Batch: CSV → cards, watermark, mockups, social variants, carousel, artboards, web export | recipes `csv_to_cards` · `batch_watermark` · `batch_mockup_replace` · `export_social_variants` · `split_carousel` · `prepare_for_web`; `export_artboards`, `export_as` | `references/batch-export.md` |
-| AI Assistant (Photoshop Beta), Firefly Boards, Actions | UI · `play_action` | `references/ai-assistant.md` |
-| jobs that combine several tools | — | `references/combos.md` |
-| modal Photoshop, UXP bridge, history, credits and the 2K cap, localized names, Windows | — | `references/gotchas.md` |
+Find every map row — every solution — this task touches: one task may need several solutions (the selection,
+the generative step, the export). Before answering, follow the link of each such solution and read its file
+(`ps_skill {doc}`): a description only says where the answer is, it is not the answer. No solution in the map
+for the task or a part of it — work by the general rules above and say so.
+
+- **Generative fill, remove, expand, image and background** — `references/generative.md`: `generative_fill` on
+  a selection, `generative_remove`, `generative_expand` (canvas + outpaint), `generate_image`, Prompt to edit,
+  Markup, Generate Background / Similar, Enhance Detail; which route is scripted and which is UI, partner
+  models and reference images, the credits each step spends, what was verified live. Read when something must
+  be added, removed, replaced, extended beyond the frame, generated from a prompt or a reference, or the
+  background regenerated — «убрать объект», «дорисовать», «расширить кадр», «сгенерировать фон».
+- **Retouch AI: distractions, Harmonize, upscale, sharpen / denoise, Neural Filters** —
+  `references/retouch.md`: the Remove tool (Find distractions) and `content_aware_fill`, `recipe
+  remove_distraction`, `image_stack`, Harmonize, `generative_upscale` (1–3 min, a new document — polling),
+  AI Sharpen / Denoise, `neural_filter` through the UXP bridge; credits and what is UI-only. Read when a photo
+  must be cleaned of people, wires or clutter, an inserted object matched to the scene, enlarged, sharpened,
+  denoised or run through a Neural Filter — «почистить», «увеличить», «убрать шум», «вписать объект».
+- **Selections and masks: subject, background removal, sky, masks** — `references/selection-masking.md`:
+  `select_subject`, `recipe remove_background`, mask operations, selection as a prompt, Quick Mask, Select and
+  Mask, `sky_replacement` / `recipe sky_blend`; what is scripted and what is UI. Read when something must be
+  cut out, masked, isolated from its background, the sky replaced, or a selection built for another step —
+  «вырезать», «маска», «убрать фон», «заменить небо».
+- **Colour and retouch by script: curves, LUTs, grades, frequency separation, dodge & burn, styles, type** —
+  `references/color-retouch.md`: recipes `frequency_separation`, `dodge_burn`, `enhance_portrait`,
+  `apply_color_grade`; `adjust_curves`, `apply_lut`, `apply_layer_style`, `create_text_layer`; all local, no
+  credits. Read when a photo must be graded, colour-matched, retouched by hand (skin, portrait), given a
+  style or text — «цветокор», «ретушь», «кривые», «LUT», «надпись».
+- **Batch and export: cards from CSV, watermark, mockups, social variants, carousel, artboards, web** —
+  `references/batch-export.md`: recipes `csv_to_cards`, `batch_watermark`, `batch_mockup_replace`,
+  `export_social_variants`, `split_carousel`, `prepare_for_web`; `export_artboards`, `export_as`; the 600 s
+  script timeout. Read when many files or variants must be produced or exported — «пакетно», «водяной знак»,
+  «мокапы», «под соцсети», «карусель», «экспорт артбордов».
+- **AI Assistant, Firefly Boards, Actions** — `references/ai-assistant.md`: the AI Assistant (Photoshop
+  Beta), Firefly Boards, `play_action` with localized set / action names. Read when the user wants the
+  assistant or boards, or a recorded action played — «экшен», «ассистент».
+- **Jobs that combine several tools** — `references/combos.md`: worked sequences across the abilities above
+  ([S] script / [U] UI / [¢] credits). Read when a request spans several abilities — a composite, a product
+  shot, a cleanup plus grade plus export.
+- **Cross-cutting gotchas** — `references/gotchas.md`: modal Photoshop, the UXP bridge, history, credits and
+  the 2K cap, localized names, Windows. Read when a call answers `photoshop_busy`, `generative_*`,
+  `command_unavailable` for no visible reason, or before the first credit-spending step.
 
 ## 5. UI-only steps
 

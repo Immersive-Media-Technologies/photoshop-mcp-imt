@@ -1,7 +1,7 @@
 {
   "name": "@immersive-media-technologies/photoshop-mcp-imt",
   "mcpName": "io.github.Immersive-Media-Technologies/photoshop-mcp-imt",
-  "version": "1.1.2",
+  "version": "1.1.3",
   "description": "Photoshop-MCP-IMT + SKILLS — MCP server and agent skills for Adobe Photoshop. Works with every UI language Adobe ships, comes with a large skills library and is built for Adobe's generative features (Generative Fill, Generative Expand, Generative Upscale, text to image, Firefly and partner models, generative credits). Built for autonomous AI agents (macOS + Windows): 135 tools behind a 10-tool facade, the Photoshop agent skill (generative tools, partner models and credits, retouch, selection, batch), a UXP bridge that keeps working when Photoshop is modal, headless corner-pin/perspective, honest busy/timeout errors, no telemetry. By Immersive Media Technologies (fork of alisaitteke/photoshop-mcp).",
   "keywords": [
     "adobe",
