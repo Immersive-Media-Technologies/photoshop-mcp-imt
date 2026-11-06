@@ -263,6 +263,8 @@ Each version is described on the
 [**Releases**](https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt/releases) page —
 what the server does at that version and what the release added:
 
+- [v1.1.4](https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt/releases/tag/v1.1.4) · 2026-11-06 —
+  the UXP bridge names an older copy that holds its port instead of «the plugin is not running»; «checks its work by sight» in the descriptions.
 - [v1.1.3](https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt/releases/tag/v1.1.3) · 2026-11-06 —
   the Photoshop skill in the skill-creator form (a map of abilities with «Read when …»); README in plain Markdown for the catalogs.
 - [v1.1.2](https://github.com/Immersive-Media-Technologies/photoshop-mcp-imt/releases/tag/v1.1.2) · 2026-10-28 —

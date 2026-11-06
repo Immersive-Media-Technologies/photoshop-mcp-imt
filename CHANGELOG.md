@@ -9,6 +9,21 @@ Versions 1.x below are the upstream history of
 
 ## [Unreleased]
 
+## [1.1.4] - 2026-11-06
+
+### Fixed
+
+- **UXP bridge: an older copy on the bridge port is named, not reported as «the plugin is not running».** When
+  another copy of this server owns 127.0.0.1:38452 (another MCP client starts its own), commands are relayed to
+  it. An older copy (live case: a Claude Desktop extension 0.4.6) expects a different token header — the
+  plugin's polls got 401 and every call said the plugin was not running. The relaying copy now asks the owner
+  with its token (`GET /whoami`) and, on a refusal, says to update or turn off the older copy.
+
+### Changed
+
+- Descriptions: «checks its work by sight» next to the UI languages (README lead, a vision row in the comparison,
+  a «How the agent sees» section, npm, `.mcpb`, `server.json`); the ChatGPT icon in Install matches the others.
+
 ## [1.1.3] - 2026-11-06
 
 ### Changed

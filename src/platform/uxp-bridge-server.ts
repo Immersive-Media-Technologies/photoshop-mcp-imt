@@ -36,6 +36,19 @@ let listenPort = DEFAULT_PORT;
 let relayPort: number | null = null;
 let relayPluginSeen = false;
 let relayCheckedAt = 0;
+// 06.11 (live case): the port owner was an OLD copy (a Claude Desktop extension 0.4.6) that
+// expects another token header — the plugin's polls got 401 and every relayed command looked like
+// «the plugin is not running». The owner is checked with our token; a refusal names the cause.
+let relayOwnerProblem: string | null = null;
+export const OWNER_INCOMPATIBLE =
+  'Another copy of Photoshop-MCP-IMT holds the bridge port 127.0.0.1:' +
+  '%PORT% and does not accept this bridge token — most likely an older version (for example a ' +
+  'Claude Desktop extension or another client). Update that copy to this version or turn it off, ' +
+  'then reopen Plugins → Photoshop-MCP-IMT Bridge in Photoshop.';
+/** Why relaying cannot work (an incompatible owner), or null. */
+export function uxpBridgeProblem(): string | null {
+  return relayOwnerProblem;
+}
 export function uxpBridgeMode(): 'owner' | 'relay' | 'off' {
   return server ? 'owner' : relayPort ? 'relay' : 'off';
 }
@@ -99,7 +112,12 @@ export async function refreshRelayHealth(): Promise<boolean> {
   const h = await probeOwner(relayPort);
   relayPluginSeen = !!h?.pluginSeen;
   relayCheckedAt = Date.now();
-  if (!h) relayPort = null; // owner gone — next ensure() tries to take the port itself
+  if (!h) {
+    relayPort = null; // owner gone — next ensure() tries to take the port itself
+    relayOwnerProblem = null;
+  } else {
+    await checkOwner(relayPort);
+  }
   return relayPluginSeen;
 }
 
@@ -122,6 +140,30 @@ async function probeOwner(port: number): Promise<OwnerHealth | null> {
   } finally {
     clearTimeout(timer);
   }
+}
+
+/** Does the owner on `port` accept our token? 401 = no (an older copy or another token); any
+ *  other answer (200 here, 404 on versions without /whoami) = yes; null = could not ask. */
+async function ownerAcceptsToken(port: number): Promise<boolean | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 800);
+  try {
+    const res = await fetch(`http://127.0.0.1:${port}/whoami`, {
+      headers: { [UXP_TOKEN_HEADER]: uxpBridgeToken() },
+      signal: controller.signal,
+    });
+    return res.status !== 401;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function checkOwner(port: number): Promise<void> {
+  const ok = await ownerAcceptsToken(port);
+  relayOwnerProblem = ok === false ? OWNER_INCOMPATIBLE.replace('%PORT%', String(port)) : null;
+  if (relayOwnerProblem) logger.warn(relayOwnerProblem);
 }
 
 function json(res: import('node:http').ServerResponse, status: number, body: unknown): void {
@@ -160,6 +202,11 @@ function startBridge(): Promise<number> {
       }
       if (!uxpTokenOk(req.headers[UXP_TOKEN_HEADER], expected)) {
         json(res, 401, { ok: false, error: 'bridge_token_required' });
+        return;
+      }
+
+      if (req.method === 'GET' && url.pathname === '/whoami') {
+        json(res, 200, { ok: true, bridge: 'ps-mcp-uxp' });
         return;
       }
 
@@ -239,6 +286,7 @@ function startBridge(): Promise<number> {
             relayPort = listenPort;
             relayPluginSeen = !!owner.pluginSeen;
             relayCheckedAt = Date.now();
+            await checkOwner(listenPort);
             logger.info(`UXP bridge: another instance owns 127.0.0.1:${listenPort} — relaying commands to it`);
             resolve(listenPort);
             return;

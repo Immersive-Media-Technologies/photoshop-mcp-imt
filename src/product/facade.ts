@@ -18,6 +18,7 @@ import { dirname } from 'node:path';
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import type { ToolDefinition, ToolRegistry, ToolResult } from '../core/tool-registry.js';
 import { isTransportFailure, uxp, uxpAvailable, uxpMode } from '../platform/uxp-transport.js';
+import { uxpBridgeProblem } from '../platform/uxp-bridge-server.js';
 import { skillToolDefinition } from './skill.js';
 
 export const FACADE_PREFIX = 'photoshop_';
@@ -320,12 +321,15 @@ export function buildFacadeTools(
         },
       },
       handler: async (args) => {
-        if (!(await uxpAvailable()))
+        if (!(await uxpAvailable())) {
+          const problem = uxpBridgeProblem();
+          if (problem) return text(`UXP bridge: ${problem}`, true);
           return text(
             'UXP bridge is not connected: the Photoshop-MCP-IMT Bridge plugin is not running inside Photoshop. ' +
               'Ask the user to open Plugins → Photoshop-MCP-IMT Bridge in Photoshop (the panel must be opened once per Photoshop launch), or to install the plugin (README, section «The UXP bridge»).',
             true,
           );
+        }
         const act = String(args.action ?? '');
         const u =
           act === 'ping'
